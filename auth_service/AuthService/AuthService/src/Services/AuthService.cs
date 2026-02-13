@@ -1,9 +1,21 @@
 using AuthService.DTOs;
+using AuthService.Repositories;
+using AuthService.Utils;
 
 namespace AuthService.Services;
 
-public class AuthService : IAuthService
+public class AuthService(
+    IAuthRepository authRepository,
+    ICacheRepository cacheRepository,
+    IAccessTokenGenerator accessTokenGenerator,
+    IRefreshTokenGenerator refreshTokenGenerator)
+    : IAuthService
 {
+    private readonly IAuthRepository _authRepository = authRepository;
+    private readonly ICacheRepository _cacheRepository = cacheRepository;
+    private readonly IAccessTokenGenerator _accessTokenGenerator = accessTokenGenerator;
+    private readonly IRefreshTokenGenerator _refreshTokenGenerator = refreshTokenGenerator;
+
     public Task<Result<AuthResponse>> Register(RegisterRequest registerRequest)
     {
         throw new NotImplementedException();

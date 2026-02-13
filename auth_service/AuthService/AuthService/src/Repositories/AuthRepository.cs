@@ -1,9 +1,12 @@
 using AuthService.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Repositories;
 
-public class AuthRepository : IAuthRepository
+public class AuthRepository(DbContext authDbContext) : IAuthRepository
 {
+    private readonly DbContext _authDbContext = authDbContext;
+
     public Task<Credentials?> GetUserCredentialsById(int id)
     {
         throw new NotImplementedException();

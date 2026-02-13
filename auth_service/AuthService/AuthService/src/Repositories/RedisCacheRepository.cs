@@ -1,7 +1,11 @@
+using StackExchange.Redis;
+
 namespace AuthService.Repositories;
 
-public class RedisCacheRepository : ICacheRepository
+public class RedisCacheRepository(IConnectionMultiplexer connectionMultiplexer) : ICacheRepository
 {
+    private readonly IConnectionMultiplexer _connectionMultiplexer = connectionMultiplexer;
+
     public Task<bool> AddRefreshToken(int userId, string refreshToken)
     {
         throw new NotImplementedException();

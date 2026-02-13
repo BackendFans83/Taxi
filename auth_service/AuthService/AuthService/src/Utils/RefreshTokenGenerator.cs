@@ -1,6 +1,9 @@
 namespace AuthService.Utils;
 
-public class RefreshTokenGenerator
+public class RefreshTokenGenerator : IRefreshTokenGenerator
 {
-    
+    public string GenerateRefreshToken()
+    {
+        throw new NotImplementedException();
+    }
 }
