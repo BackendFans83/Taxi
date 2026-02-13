@@ -1,29 +1,37 @@
 namespace AuthService.DTOs;
 
-public class Result<T>
+public class Result
 {
-    public bool IsSuccess { get; private set; }
-    public T? Value { get; private set; }
-    public int StatusCode { get; private set; }
-    public string? ErrorMessage { get; private set; }
+    public bool IsSuccess { get; }
+    public int StatusCode { get; }
+    public string? ErrorMessage { get; }
 
-    public static Result<T> Success(T value, int statusCode = 200)
+    protected Result(bool isSuccess, int statusCode = 200, string errorMessage = "")
     {
-        return new Result<T>
-        {
-            IsSuccess = true,
-            Value = value,
-            StatusCode = statusCode,
-        };
+        IsSuccess = isSuccess;
+        StatusCode = statusCode;
+        ErrorMessage = errorMessage;
     }
-    
-    public static Result<T> Error(int statusCode = 200, string errorMessage = "")
+
+    public static Result Success(int statusCode = 200)
+        => new(true, statusCode);
+
+    public static Result Failure(int statusCode = 500, string errorMessage = "") => 
+        new(false, statusCode, errorMessage);
+}
+
+public class Result<T> : Result
+{
+    public T? Value { get; }
+
+    private Result(bool isSuccess, T? value, int statusCode = 200, string errorMessage = "") : base(isSuccess,
+        statusCode, errorMessage)
     {
-        return new Result<T>
-        {
-            IsSuccess = false,
-            ErrorMessage =  errorMessage,
-            StatusCode = statusCode,
-        };
+        Value = value;
     }
+
+    public static Result<T> Success(T value, int statusCode = 200) => new(true, value, statusCode);
+
+    public static Result<T> Failure(int statusCode = 200, string errorMessage = "") =>
+        new(false, default, statusCode, errorMessage);
 }

@@ -1,6 +1,6 @@
 namespace AuthService.Utils;
 
-public class IRefreshTokenGenerator
+public interface IRefreshTokenGenerator
 {
     
 }
