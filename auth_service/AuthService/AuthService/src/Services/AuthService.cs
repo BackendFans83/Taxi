@@ -1,4 +1,6 @@
 using AuthService.DTOs;
+using AuthService.Enums;
+using AuthService.Models;
 using AuthService.Repositories;
 using AuthService.Utils;
 
@@ -11,14 +13,31 @@ public class AuthService(
     IRefreshTokenGenerator refreshTokenGenerator)
     : IAuthService
 {
-    private readonly IAuthRepository _authRepository = authRepository;
-    private readonly ICacheRepository _cacheRepository = cacheRepository;
-    private readonly IAccessTokenGenerator _accessTokenGenerator = accessTokenGenerator;
-    private readonly IRefreshTokenGenerator _refreshTokenGenerator = refreshTokenGenerator;
-
-    public Task<Result<AuthResponse>> Register(RegisterRequest registerRequest)
+    public async Task<Result<AuthResponse>> Register(RegisterRequest registerRequest)
     {
-        throw new NotImplementedException();
+        registerRequest.Email = registerRequest.Email.ToLower();
+        var existingUser = await authRepository.GetUserCredentialsByEmail(registerRequest.Email);
+        
+        if (existingUser != null)
+            return Result<AuthResponse>.Failure(409, "User with this email already exists");
+        if (!Enum.TryParse<Role>(registerRequest.Role, true, out var role))
+            return Result<AuthResponse>.Failure(400, "Invalid role specified");
+        
+        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password, workFactor: 9);
+        var credentials = new Credentials(registerRequest.Email, hashedPassword, role);
+        
+        var createUserResult = await authRepository.CreateUserCredentials(credentials);
+        if (!createUserResult)
+            return Result<AuthResponse>.Failure(500, "Failed to create user account");
+
+        var savedUser = await authRepository.GetUserCredentialsByEmail(registerRequest.Email);
+        if (savedUser == null)
+            return Result<AuthResponse>.Failure(500, "Failed to retrieve created user");
+
+        var accessToken = accessTokenGenerator.GenerateAccessToken(savedUser.Id, savedUser.Role);
+        var authResponse = new AuthResponse(savedUser.Id, accessToken);
+        
+        return Result<AuthResponse>.Success(authResponse);
     }
 
     public Task<Result<AuthResponse>> Login(LoginRequest loginRequest)
@@ -49,5 +68,12 @@ public class AuthService(
     public Task<Result> ChangePassword(int userId, string oldPassword, string newPassword)
     {
         throw new NotImplementedException();
+    }
+
+    public async Task<string?> GenerateRefreshToken(int id)
+    {
+        var refreshToken = refreshTokenGenerator.GenerateRefreshToken();
+        var cacheResult = await cacheRepository.AddRefreshToken(id, refreshToken);
+        return !cacheResult ? null : refreshToken;
     }
 }

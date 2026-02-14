@@ -1,6 +1,7 @@
 namespace AuthService.DTOs;
 
-public class AuthResponse(string accessToken)
+public class AuthResponse(int id, string accessToken)
 {
-    public string AccessToken { get; set; } = accessToken;
+    public int Id { get; } = id;
+    public string AccessToken { get; } = accessToken;
 }

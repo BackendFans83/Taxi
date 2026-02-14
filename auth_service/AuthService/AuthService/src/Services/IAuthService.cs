@@ -11,4 +11,5 @@ public interface IAuthService
     Task<Result> SendVerificationCode(string email);
     Task<Result> VerifyEmail(string email, string code);
     Task<Result> ChangePassword(int userId, string oldPassword, string newPassword);
+    Task<string?> GenerateRefreshToken(int id);
 }
