@@ -5,35 +5,50 @@ namespace AuthService.Repositories;
 
 public class AuthRepository(DbContext authDbContext) : IAuthRepository
 {
-    private readonly DbContext _authDbContext = authDbContext;
-
-    public Task<Credentials?> GetUserCredentialsById(int id)
+    public async Task<Credentials?> GetUserCredentialsById(int id)
     {
-        throw new NotImplementedException();
+        return await authDbContext.Set<Credentials>().FindAsync(id);
     }
 
-    public Task<Credentials?> GetUserCredentialsByEmail(string email)
+    public async Task<Credentials?> GetUserCredentialsByEmail(string email)
     {
-        throw new NotImplementedException();
+        return await authDbContext.Set<Credentials>().FirstOrDefaultAsync(c => c.Email == email);
     }
 
-    public Task<bool> CreateUserCredentials(Credentials credentials)
+    public async Task<bool> CreateUserCredentials(Credentials credentials)
     {
-        throw new NotImplementedException();
+        authDbContext.Set<Credentials>().Add(credentials);
+        var result = await authDbContext.SaveChangesAsync();
+        return result > 0;
     }
 
-    public Task<bool> ChangePassword(int id, string password)
+    public async Task<bool> ChangePassword(int id, string passwordHash)
     {
-        throw new NotImplementedException();
+        var user = await authDbContext.Set<Credentials>().FindAsync(id);
+        if (user == null) return false;
+        
+        user.ChangePassword(passwordHash);
+        var result = await authDbContext.SaveChangesAsync();
+        return result > 0;
     }
 
-    public Task<bool> ConfirmEmail(int id)
+    public async Task<bool> ConfirmEmail(int id)
     {
-        throw new NotImplementedException();
+        var user = await authDbContext.Set<Credentials>().FindAsync(id);
+        if (user == null) return false;
+        
+        user.ConfirmEmail();
+        var result = await authDbContext.SaveChangesAsync();
+        return result > 0;
     }
 
-    public Task<bool> DeleteUnverifiedUser(int id)
+    public async Task<bool> DeleteUnverifiedUser(int id)
     {
-        throw new NotImplementedException();
+        var user = await authDbContext.Set<Credentials>().FindAsync(id);
+        if (user == null || user.EmailVerified) return false;
+        
+        authDbContext.Set<Credentials>().Remove(user);
+        var result = await authDbContext.SaveChangesAsync();
+        return result > 0;
     }
 }
