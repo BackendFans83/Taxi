@@ -8,14 +8,18 @@ namespace AuthService.Controllers;
 [ApiController, Route("api/v1/auth")]
 public class AuthController(IAuthService authService) : ControllerBase
 {
-    private readonly IAuthService _authService = authService;
-
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
     {
-        throw new NotImplementedException();
+        var result = await authService.Register(registerRequest);
+
+        if (!result.IsSuccess)
+            return GetErrorResult(result);
+        
+        var actionResult = await CreateRefreshTokenInCookie(result);
+        return actionResult ?? Ok(result);
     }
-    
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody]LoginRequest loginRequest)
     {
@@ -51,5 +55,26 @@ public class AuthController(IAuthService authService) : ControllerBase
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest changePasswordRequest)
     {
         throw new NotImplementedException();
+    }
+    
+    private async Task<IActionResult?> CreateRefreshTokenInCookie(Result<AuthResponse> result)
+    {
+        var refreshToken = await authService.GenerateRefreshToken(result.Value!.Id);
+        if(refreshToken == null)
+            return StatusCode(500, "Refresh token not created");
+        HttpContext.Response.Cookies.Append("RefreshToken", refreshToken);
+        return null;
+    }
+    
+    private IActionResult GetErrorResult(Result<AuthResponse> result)
+    {
+        var message = result.ErrorMessage;
+        return result.StatusCode switch
+        {
+            400 => BadRequest(message),
+            409 => Conflict(message),
+            500 => StatusCode(500, message),
+            _ => StatusCode(result.StatusCode, message)
+        };
     }
 }
