@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using AuthService.Enums;
 
 namespace AuthService.Models;
@@ -34,5 +32,15 @@ public class Credentials
         EmailVerified = emailVerified;
         GoogleOAuthId = googleOAuthId;
         AppleOAuthId = appleOAuthId;
+    }
+
+    public void ChangePassword(string newPassword)
+    {
+        PasswordHash = newPassword;
+    }
+
+    public void ConfirmEmail()
+    {
+        EmailVerified = true;
     }
 }
