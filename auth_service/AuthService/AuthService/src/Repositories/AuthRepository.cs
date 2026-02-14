@@ -31,24 +31,4 @@ public class AuthRepository(DbContext authDbContext) : IAuthRepository
         var result = await authDbContext.SaveChangesAsync();
         return result > 0;
     }
-
-    public async Task<bool> ConfirmEmail(int id)
-    {
-        var user = await authDbContext.Set<Credentials>().FindAsync(id);
-        if (user == null) return false;
-        
-        user.ConfirmEmail();
-        var result = await authDbContext.SaveChangesAsync();
-        return result > 0;
-    }
-
-    public async Task<bool> DeleteUnverifiedUser(int id)
-    {
-        var user = await authDbContext.Set<Credentials>().FindAsync(id);
-        if (user == null || user.EmailVerified) return false;
-        
-        authDbContext.Set<Credentials>().Remove(user);
-        var result = await authDbContext.SaveChangesAsync();
-        return result > 0;
-    }
 }

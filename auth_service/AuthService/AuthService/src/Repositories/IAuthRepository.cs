@@ -8,6 +8,4 @@ public interface IAuthRepository
     Task<Credentials?> GetUserCredentialsByEmail(string email);
     Task<bool> CreateUserCredentials(Credentials credentials);
     Task<bool> ChangePassword(int id, string passwordHash);
-    Task<bool> ConfirmEmail(int id);
-    Task<bool> DeleteUnverifiedUser(int id);
 }
