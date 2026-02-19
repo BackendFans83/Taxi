@@ -9,5 +9,5 @@ public interface ICacheRepository
     Task<int?> GetUserIdByRefreshToken(string refreshToken);
     Task<bool> DeleteRefreshToken(string refreshToken);
     Task<bool> CreateUnverifiedUserByToken(string token, UnverifiedUser unverifiedUser);
-    Task<UnverifiedUser> GetUnverifiedUserByToken(string token);
+    Task<UnverifiedUser?> GetUnverifiedUserByToken(string token);
 }
