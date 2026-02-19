@@ -55,7 +55,7 @@ public class AuthService(
         throw new NotImplementedException();
     }
 
-    public Task<Result> SendVerificationCode(string email)
+    public Task<Result<string>> SendVerificationCode(string email)
     {
         throw new NotImplementedException();
     }
