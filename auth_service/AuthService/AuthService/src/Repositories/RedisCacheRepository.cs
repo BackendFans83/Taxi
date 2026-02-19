@@ -1,3 +1,5 @@
+using AuthService.DTOs;
+using AuthService.Models;
 using StackExchange.Redis;
 
 namespace AuthService.Repositories;
@@ -17,6 +19,16 @@ public class RedisCacheRepository(IConnectionMultiplexer connectionMultiplexer) 
     }
 
     public Task<bool> DeleteRefreshToken(string refreshToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<bool> CreateUnverifiedUserByToken(string token, UnverifiedUser unverifiedUser)
+    {
+        throw new NotImplementedException();
+    }
+    
+    public Task<UnverifiedUser> GetUnverifiedUserByToken(string token)
     {
         throw new NotImplementedException();
     }
