@@ -16,12 +16,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             cars.ToTable("cars");
             cars.HasKey(c => c.Id);
+            cars.HasIndex(c => c.DriverId);
+            cars.HasIndex(c => c.Number).IsUnique();
         });
         
         builder.Entity<Review>(reviews =>
         {
             reviews.ToTable("reviews");
             reviews.HasKey(r => r.Id);
+            reviews.HasIndex(r => r.AuthorId);
+            reviews.HasIndex(r => r.RecipientId);
         });
         
         builder.Entity<PassengerProfile>(passengerProfiles =>
@@ -34,6 +38,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             driverProfiles.ToTable("driver_profiles");
             driverProfiles.HasKey(dp => dp.Id);
+            driverProfiles.HasIndex(dp=>dp.LicenseNumber).IsUnique();
         });
     }
 }
