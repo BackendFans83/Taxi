@@ -40,9 +40,21 @@ public class AuthService(
         return Result<AuthResponse>.Success(authResponse);
     }
 
-    public Task<Result<AuthResponse>> Login(LoginRequest loginRequest)
+    public async Task<Result<AuthResponse>> Login(LoginRequest loginRequest)
     {
-        throw new NotImplementedException();
+        loginRequest.Email = loginRequest.Email.ToLower();
+        var credentials = await authRepository.GetUserCredentialsByEmail(loginRequest.Email);
+
+        if (credentials == null)
+            return Result<AuthResponse>.Failure(401, "Invalid email or password");
+
+        if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, credentials.PasswordHash))
+            return Result<AuthResponse>.Failure(401, "Invalid email or password");
+
+        var accessToken = accessTokenGenerator.GenerateAccessToken(credentials.Id, credentials.Role);
+        var authResponse = new AuthResponse(credentials.Id, accessToken);
+
+        return Result<AuthResponse>.Success(authResponse);
     }
 
     public Task<Result> Logout(string refreshToken)

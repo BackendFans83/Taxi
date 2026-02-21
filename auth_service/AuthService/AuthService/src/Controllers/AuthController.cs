@@ -21,9 +21,15 @@ public class AuthController(IAuthService authService) : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody]LoginRequest loginRequest)
+    public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
     {
-        throw new NotImplementedException();
+        var result = await authService.Login(loginRequest);
+
+        if (!result.IsSuccess)
+            return GetErrorResult(result);
+
+        var actionResult = await CreateRefreshTokenInCookie(result);
+        return actionResult ?? Ok(result);
     }
     
     [HttpPost("logout")]
