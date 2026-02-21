@@ -1,0 +1,657 @@
+openapi: 3.0.0
+info:
+  title: Location Service API
+  description: |
+    API для управления геоданными в системе такси.
+    - Обновление и получение местоположений водителей
+    - Поиск ближайших водителей
+    - Геокодирование (прямое и обратное)
+    - Построение маршрутов
+    - История перемещений водителя
+  version: 1.0.0
+  contact:
+    name: Codevoke Team
+    url: https://codevoke.ru
+servers:
+  - url: https://api.taxi.codevoke.ru/location/v1
+    description: Production server
+  - url: http://localhost:8080/api/v1
+    description: Local development
+tags:
+  - name: Drivers
+    description: Операции с местоположением водителей
+  - name: Geocoding
+    description: Преобразование координат и адресов
+  - name: Routes
+    description: Построение маршрутов
+  - name: Health
+    description: Проверка работоспособности
+paths:
+  /drivers/location:
+    post:
+      tags:
+        - Drivers
+      summary: Обновление местоположения водителя
+      description: Отправить текущие координаты водителя. Сохраняется в Redis (последнее положение) и в MongoDB (история).
+      operationId: updateDriverLocation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverLocationUpdate'
+            example:
+              driver_id: "123e4567-e89b-12d3-a456-426614174000"
+              lat: 55.7558
+              lng: 37.6176
+              timestamp: "2026-02-21T15:30:00Z"
+      responses:
+        '202':
+          description: Запрос принят, данные будут обработаны
+        '400':
+          description: Некорректные данные (например, невалидные координаты)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Отсутствует или недействителен токен авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /drivers/{driver_id}/location:
+    get:
+      tags:
+        - Drivers
+      summary: Получить последнее местоположение водителя
+      description: Возвращает последние известные координаты водителя из Redis.
+      operationId: getDriverLocation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: driver_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID водителя
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverLocation'
+              example:
+                driver_id: "123e4567-e89b-12d3-a456-426614174000"
+                lat: 55.7558
+                lng: 37.6176
+                timestamp: "2026-02-21T15:30:00Z"
+        '404':
+          description: Водитель не найден или нет данных о местоположении
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Отсутствует или недействителен токен авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /drivers/nearby:
+    get:
+      tags:
+        - Drivers
+      summary: Поиск ближайших водителей
+      description: Возвращает список водителей в заданном радиусе от указанной точки. Использует геоиндексы Redis.
+      operationId: findNearbyDrivers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          description: Широта центра поиска
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          description: Долгота центра поиска
+        - name: radius
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+            default: 5
+            minimum: 0.1
+            maximum: 50
+          description: Радиус поиска в километрах
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Максимальное количество возвращаемых водителей
+      responses:
+        '200':
+          description: Список ближайших водителей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drivers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NearbyDriver'
+              example:
+                drivers:
+                  - driver_id: "123e4567-e89b-12d3-a456-426614174000"
+                    lat: 55.7561
+                    lng: 37.6180
+                    distance_km: 0.3
+                  - driver_id: "223e4567-e89b-12d3-a456-426614174001"
+                    lat: 55.7532
+                    lng: 37.6155
+                    distance_km: 1.2
+        '400':
+          description: Некорректные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Отсутствует или недействителен токен авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /geocode/reverse:
+    get:
+      tags:
+        - Geocoding
+      summary: Обратное геокодирование (координаты → адрес)
+      description: Преобразует координаты в читаемый адрес, используя OSM с кэшированием в Redis.
+      operationId: reverseGeocode
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+          description: Широта
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+          description: Долгота
+      responses:
+        '200':
+          description: Адрес, соответствующий координатам
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address:
+                    type: string
+              example:
+                address: "ул. Тверская, 1, Москва, Россия"
+        '400':
+          description: Некорректные координаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Адрес не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Отсутствует или недействителен токен авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера (или ошибка внешнего сервиса)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /geocode/forward:
+    get:
+      tags:
+        - Geocoding
+      summary: Прямое геокодирование (адрес → координаты)
+      description: Преобразует адрес в координаты (широта/долгота) с кэшированием.
+      operationId: forwardGeocode
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: address
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Адрес в свободной форме
+      responses:
+        '200':
+          description: Координаты, соответствующие адресу
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lat:
+                    type: number
+                    format: double
+                  lng:
+                    type: number
+                    format: double
+              example:
+                lat: 55.7558
+                lng: 37.6176
+        '400':
+          description: Пустой или некорректный адрес
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Координаты не найдены для данного адреса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Отсутствует или недействителен токен авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /routes:
+    post:
+      tags:
+        - Routes
+      summary: Построение маршрута
+      description: Запрашивает маршрут между точками у внешнего картографического сервиса (OSM). Результат кэшируется.
+      operationId: getRoute
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteRequest'
+            example:
+              origin:
+                lat: 55.7558
+                lng: 37.6176
+              destination:
+                lat: 55.7512
+                lng: 37.6289
+              waypoints:
+                - lat: 55.7535
+                  lng: 37.6214
+      responses:
+        '200':
+          description: Информация о маршруте
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+              example:
+                distance_km: 5.2
+                duration_min: 15
+                polyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+        '400':
+          description: Некорректные точки маршрута
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Отсутствует или недействителен токен авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /drivers/{driver_id}/history:
+    get:
+      tags:
+        - Drivers
+      summary: История перемещений водителя
+      description: Возвращает сохранённую историю местоположений водителя из MongoDB за указанный период.
+      operationId: getDriverHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: driver_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID водителя
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Начало периода (ISO 8601). Если не указано, то за последние 24 часа.
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Конец периода (ISO 8601). Если не указано, то текущее время.
+      responses:
+        '200':
+          description: Список точек истории
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  history:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationPoint'
+              example:
+                history:
+                  - lat: 55.7558
+                    lng: 37.6176
+                    timestamp: "2026-02-21T15:30:00Z"
+                  - lat: 55.7561
+                    lng: 37.6180
+                    timestamp: "2026-02-21T15:35:00Z"
+        '400':
+          description: Некорректные параметры запроса (например, неверный формат даты)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Водитель не найден или история отсутствует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Отсутствует или недействителен токен авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Проверка здоровья сервиса
+      description: Возвращает статус сервиса для мониторинга.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Сервис работает нормально
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  version:
+                    type: string
+              example:
+                status: ok
+                version: 1.0.0
+        '503':
+          description: Сервис недоступен (например, проблемы с БД или внешними сервисами)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [degraded, down]
+                  details:
+                    type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен, полученный от Auth Service. Передаётся в заголовке Authorization: Bearer <token>
+
+  schemas:
+    DriverLocationUpdate:
+      type: object
+      required:
+        - driver_id
+        - lat
+        - lng
+        - timestamp
+      properties:
+        driver_id:
+          type: string
+          format: uuid
+          description: Идентификатор водителя
+        lat:
+          type: number
+          format: double
+          description: Широта
+        lng:
+          type: number
+          format: double
+          description: Долгота
+        timestamp:
+          type: string
+          format: date-time
+          description: Время фиксации координат (ISO 8601)
+      example:
+        driver_id: "123e4567-e89b-12d3-a456-426614174000"
+        lat: 55.7558
+        lng: 37.6176
+        timestamp: "2026-02-21T15:30:00Z"
+
+    DriverLocation:
+      type: object
+      required:
+        - driver_id
+        - lat
+        - lng
+        - timestamp
+      properties:
+        driver_id:
+          type: string
+          format: uuid
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+
+    NearbyDriver:
+      type: object
+      required:
+        - driver_id
+        - lat
+        - lng
+        - distance_km
+      properties:
+        driver_id:
+          type: string
+          format: uuid
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        distance_km:
+          type: number
+          format: float
+          description: Расстояние от точки поиска в километрах
+
+    LocationPoint:
+      type: object
+      required:
+        - lat
+        - lng
+        - timestamp
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+
+    RouteRequest:
+      type: object
+      required:
+        - origin
+        - destination
+      properties:
+        origin:
+          $ref: '#/components/schemas/Point'
+        destination:
+          $ref: '#/components/schemas/Point'
+        waypoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/Point'
+          description: Промежуточные точки (опционально)
+
+    Point:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+
+    Route:
+      type: object
+      required:
+        - distance_km
+        - duration_min
+        - polyline
+      properties:
+        distance_km:
+          type: number
+          format: double
+          description: Общая дистанция маршрута в километрах
+        duration_min:
+          type: integer
+          description: Ориентировочное время в минутах
+        polyline:
+          type: string
+          description: Закодированная полилиния маршрута (формат Google Polyline)
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: HTTP-код ошибки
+        message:
+          type: string
+          description: Описание ошибки
+        details:
+          type: string
+          description: Дополнительная информация (опционально)
+      example:
+        code: 400
+        message: "Invalid latitude value"
