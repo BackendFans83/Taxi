@@ -1,0 +1,120 @@
+name: CI for Microservice PR
+
+on:
+  pull_request:
+    branches:
+      - 'dev/*-service'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      service: ${{ steps.extract.outputs.service }}
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract service name from base branch
+        id: extract
+        run: |
+          BASE="${{ github.base_ref }}"                
+          SERVICE="${BASE#dev/}"
+          echo "service=$SERVICE" >> $GITHUB_OUTPUT
+
+      - name: Check if service folder exists
+        id: folder
+        run: |
+          if [ -d "${{ steps.extract.outputs.service }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get changed files in service folder
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            ${{ steps.extract.outputs.service }}/**/*
+
+      - name: Determine if we should run
+        id: check
+        run: |
+          if [[ "${{ steps.folder.outputs.exists }}" == "true" && "${{ steps.changed-files.outputs.any_changed }}" == "true" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SERVICE: ${{ needs.detect.outputs.service }}
+      SHORT_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Restore dependencies
+        working-directory: ${{ env.SERVICE }}
+        run: dotnet restore
+
+      - name: Build
+        working-directory: ${{ env.SERVICE }}
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        working-directory: ${{ env.SERVICE }}
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+      - name: Check formatting
+        id: format
+        working-directory: ${{ env.SERVICE }}
+        run: dotnet format --verify-no-changes --verbosity diagnostic
+        continue-on-error: true
+
+      - name: Comment PR about formatting failure
+        if: steps.format.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Code formatting check failed** for `${{ env.SERVICE }}`.\n\nPlease run `dotnet format` locally and push fixes.'
+            });
+
+      - name: Fail if formatting failed
+        if: steps.format.outcome == 'failure'
+        run: exit 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ env.SERVICE }}
+          file: ./${{ env.SERVICE }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ env.SERVICE }}:pr-${{ github.event.number }}
