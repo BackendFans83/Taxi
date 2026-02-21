@@ -1,6 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using UserService.Models;
+
 namespace UserService.Repositories;
 
-public class CarRepository : ICarRepository
+public class CarRepository(DbSet<Car> cars) : ICarRepository
 {
     
 }
