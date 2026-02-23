@@ -3,7 +3,7 @@ name: CI for Microservice PR
 on:
   pull_request:
     branches:
-      - 'dev/*-service'
+      - "dev/*-service"
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -25,30 +25,42 @@ jobs:
       - name: Extract service name from base branch
         id: extract
         run: |
-          BASE="${{ github.base_ref }}"                
+          BASE="${{ github.base_ref }}"
           SERVICE="${BASE#dev/}"
           echo "service=$SERVICE" >> $GITHUB_OUTPUT
 
-      - name: Check if service folder exists
-        id: folder
+      - name: Determine actual folder name
+        id: actual-folder
         run: |
-          if [ -d "${{ steps.extract.outputs.service }}" ]; then
+          SERVICE_NAME="${{ steps.extract.outputs.service }}"
+          # Вариант 1: точное совпадение (kebab-case)
+          if [ -d "$SERVICE_NAME" ]; then
+            echo "folder=$SERVICE_NAME" >> $GITHUB_OUTPUT
             echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          # Вариант 2: преобразуем kebab-case в PascalCase (например, user-service → UserService)
+          PASCAL=$(echo "$SERVICE_NAME" | sed -E 's/(^|-)([a-z])/\U\2/g')
+          if [ -d "$PASCAL" ]; then
+            echo "folder=$PASCAL" >> $GITHUB_OUTPUT
+            echo "exists=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          # Если ничего не найдено
+          echo "exists=false" >> $GITHUB_OUTPUT
 
       - name: Get changed files in service folder
+        if: steps.actual-folder.outputs.exists == 'true'
         id: changed-files
         uses: tj-actions/changed-files@v44
         with:
           files: |
-            ${{ steps.extract.outputs.service }}/**/*
+            ${{ steps.actual-folder.outputs.folder }}/**/*
 
       - name: Determine if we should run
         id: check
         run: |
-          if [[ "${{ steps.folder.outputs.exists }}" == "true" && "${{ steps.changed-files.outputs.any_changed }}" == "true" ]]; then
+          if [[ "${{ steps.actual-folder.outputs.exists }}" == "true" && "${{ steps.changed-files.outputs.any_changed }}" == "true" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
