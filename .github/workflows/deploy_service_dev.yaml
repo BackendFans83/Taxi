@@ -15,52 +15,50 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     outputs:
-      service: ${{ steps.extract.outputs.service }}
+      service_kebab: ${{ steps.extract.outputs.service_kebab }}
+      service_pascal: ${{ steps.pascal.outputs.service_pascal }}
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
-      - name: Extract service name from base branch
+      - name: Extract service name from base branch (kebab-case)
         id: extract
         run: |
           BASE="${{ github.base_ref }}"
-          SERVICE="${BASE#dev/}"
-          echo "service=$SERVICE" >> $GITHUB_OUTPUT
+          SERVICE_KEBAB="${BASE#dev/}"
+          echo "service_kebab=$SERVICE_KEBAB" >> $GITHUB_OUTPUT
 
-      - name: Determine actual folder name
-        id: actual-folder
+      - name: Convert to PascalCase (folder name)
+        id: pascal
         run: |
-          SERVICE_NAME="${{ steps.extract.outputs.service }}"
-          # Вариант 1: точное совпадение (kebab-case)
-          if [ -d "$SERVICE_NAME" ]; then
-            echo "folder=$SERVICE_NAME" >> $GITHUB_OUTPUT
+          KEBAB="${{ steps.extract.outputs.service_kebab }}"
+          # Преобразование: user-service → UserService
+          PASCAL=$(echo "$KEBAB" | sed -E 's/(^|-)([a-z])/\U\2/g')
+          echo "service_pascal=$PASCAL" >> $GITHUB_OUTPUT
+
+      - name: Check if folder exists
+        id: folder-exists
+        run: |
+          if [ -d "${{ steps.pascal.outputs.service_pascal }}" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            exit 0
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
           fi
-          # Вариант 2: преобразуем kebab-case в PascalCase (например, user-service → UserService)
-          PASCAL=$(echo "$SERVICE_NAME" | sed -E 's/(^|-)([a-z])/\U\2/g')
-          if [ -d "$PASCAL" ]; then
-            echo "folder=$PASCAL" >> $GITHUB_OUTPUT
-            echo "exists=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          # Если ничего не найдено
-          echo "exists=false" >> $GITHUB_OUTPUT
 
       - name: Get changed files in service folder
-        if: steps.actual-folder.outputs.exists == 'true'
+        if: steps.folder-exists.outputs.exists == 'true'
         id: changed-files
         uses: tj-actions/changed-files@v44
         with:
           files: |
-            ${{ steps.actual-folder.outputs.folder }}/**/*
+            ${{ steps.pascal.outputs.service_pascal }}/**/*
 
       - name: Determine if we should run
         id: check
         run: |
-          if [[ "${{ steps.actual-folder.outputs.exists }}" == "true" && "${{ steps.changed-files.outputs.any_changed }}" == "true" ]]; then
+          if [[ "${{ steps.folder-exists.outputs.exists }}" == "true" && "${{ steps.changed-files.outputs.any_changed }}" == "true" ]]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
@@ -71,8 +69,8 @@ jobs:
     if: needs.detect.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
-      SERVICE: ${{ needs.detect.outputs.service }}
-      SHORT_SHA: ${{ github.event.pull_request.head.sha }}
+      SERVICE_FOLDER: ${{ needs.detect.outputs.service_pascal }}
+      SERVICE_NAME: ${{ needs.detect.outputs.service_kebab }}
     steps:
       - uses: actions/checkout@v4
 
@@ -81,21 +79,29 @@ jobs:
         with:
           dotnet-version: 10.x
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles(format('{0}/**/*.csproj', env.SERVICE_FOLDER)) }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
-        working-directory: ${{ env.SERVICE }}
+        working-directory: ${{ env.SERVICE_FOLDER }}
         run: dotnet restore
 
       - name: Build
-        working-directory: ${{ env.SERVICE }}
+        working-directory: ${{ env.SERVICE_FOLDER }}
         run: dotnet build --configuration Release --no-restore
 
       - name: Test
-        working-directory: ${{ env.SERVICE }}
+        working-directory: ${{ env.SERVICE_FOLDER }}
         run: dotnet test --configuration Release --no-build --verbosity normal
 
       - name: Check formatting
         id: format
-        working-directory: ${{ env.SERVICE }}
+        working-directory: ${{ env.SERVICE_FOLDER }}
         run: dotnet format --verify-no-changes --verbosity diagnostic
         continue-on-error: true
 
@@ -108,7 +114,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ **Code formatting check failed** for `${{ env.SERVICE }}`.\n\nPlease run `dotnet format` locally and push fixes.'
+              body: '❌ **Code formatting check failed** for `${{ env.SERVICE_NAME }}`.\n\nPlease run `dotnet format` locally and push fixes.'
             });
 
       - name: Fail if formatting failed
@@ -125,8 +131,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./${{ env.SERVICE }}
-          file: ./${{ env.SERVICE }}/Dockerfile
+          context: ./${{ env.SERVICE_FOLDER }}
+          file: ./${{ env.SERVICE_FOLDER }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/${{ env.SERVICE }}:pr-${{ github.event.number }}
+            ghcr.io/${{ github.repository }}/${{ env.SERVICE_NAME }}:pr-${{ github.event.number }}
