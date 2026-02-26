@@ -39,6 +39,7 @@ builder.Services.AddScoped<IUserService, UserService.Services.UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 
+// создаем настройки jwt токена
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
