@@ -57,9 +57,16 @@ public class AuthService(
         return Result<AuthResponse>.Success(authResponse);
     }
 
-    public Task<Result> Logout(string refreshToken)
+    public async Task<Result> Logout(string refreshToken)
     {
-        throw new NotImplementedException();
+        var userId = await cacheRepository.GetUserIdByRefreshToken(refreshToken);
+
+        if (userId == null)
+            return Result.Failure(401, "Invalid refresh token");
+
+        var deleted = await cacheRepository.DeleteRefreshToken(refreshToken);
+
+        return deleted ? Result.Success() : Result.Failure(500, "Failed to logout");
     }
 
     public Task<Result> Refresh(string refreshToken)
