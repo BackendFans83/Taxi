@@ -228,7 +228,7 @@ namespace Tests.UnitTests.Services
 
                 var result = await _authService.Login(loginRequest);
 
-                Assert.True(result.IsSuccess,result.ErrorMessage);
+                Assert.True(result.IsSuccess, result.ErrorMessage);
                 Assert.NotNull(result.Value);
                 Assert.Equal(role, credentials.Role);
             }

@@ -16,7 +16,7 @@ public class AuthControllerTests
     {
         _mockAuthService = new Mock<IAuthService>();
         _authController = new AuthController(_mockAuthService.Object)
-            { ControllerContext = new ControllerContext() { HttpContext = new DefaultHttpContext() } };
+        { ControllerContext = new ControllerContext() { HttpContext = new DefaultHttpContext() } };
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class AuthControllerTests
         var unauthorizedResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(401, unauthorizedResult.StatusCode);
     }
-    
+
     [Fact]
     public async Task Register_DifferentRoles_ReturnsOkResult()
     {

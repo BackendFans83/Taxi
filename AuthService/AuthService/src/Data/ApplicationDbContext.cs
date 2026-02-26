@@ -13,7 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             credentials.ToTable("credentials");
             credentials.HasKey(c => c.Id);
-            
+
             credentials.HasIndex(c => c.Email).IsUnique();
             credentials.HasIndex(c => c.GoogleOAuthId).IsUnique();
             credentials.HasIndex(c => c.AppleOAuthId).IsUnique();
