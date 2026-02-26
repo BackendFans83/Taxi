@@ -1,0 +1,303 @@
+name: CI for Microservice PR (Go)
+
+on:
+  pull_request:
+    branches:
+      - "dev/*-service"
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      service_kebab: ${{ steps.extract.outputs.service_kebab }}
+      service_pascal: ${{ steps.pascal.outputs.service_pascal }}
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Extract service name from base branch (kebab-case)
+        id: extract
+        run: |
+          BASE="${{ github.base_ref }}"
+          SERVICE_KEBAB="${BASE#dev/}"
+          echo "service_kebab=$SERVICE_KEBAB" >> $GITHUB_OUTPUT
+
+      - name: Convert to PascalCase (folder name, если папки именуются так)
+        id: pascal
+        run: |
+          KEBAB="${{ steps.extract.outputs.service_kebab }}"
+          # user-service → UserService (если нужно)
+          PASCAL=$(echo "$KEBAB" | sed -E 's/(^|-)([a-z])/\U\2/g')
+          echo "service_pascal=$PASCAL" >> $GITHUB_OUTPUT
+
+      - name: Check if folder exists
+        id: folder-exists
+        run: |
+          if [ -d "${{ steps.pascal.outputs.service_pascal }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get changed files in service folder
+        if: steps.folder-exists.outputs.exists == 'true'
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            ${{ steps.pascal.outputs.service_pascal }}/**/*
+
+      - name: Check for .go files
+        id: check-go
+        if: steps.folder-exists.outputs.exists == 'true'
+        run: |
+          has_go=false
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ "$file" == *.go ]]; then
+              has_go=true
+              break
+            fi
+          done
+          echo "has_go=$has_go" >> $GITHUB_OUTPUT
+
+      - name: Determine if we should run
+        id: check
+        run: |
+          if [[ "${{ steps.folder-exists.outputs.exists }}" == "true" && "${{ steps.check-go.outputs.has_go }}" == "true" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SERVICE_FOLDER: ${{ needs.detect.outputs.service_pascal }}
+      SERVICE_NAME: ${{ needs.detect.outputs.service_kebab }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ${{ env.SERVICE_FOLDER }}/go.sum
+          key: ${{ runner.os }}-go-${{ hashFiles(format('{0}/go.sum', env.SERVICE_FOLDER)) }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: go mod download
+
+      - name: Lint
+        id: lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: ${{ env.SERVICE_FOLDER }}
+          args: --timeout=3m
+        continue-on-error: true
+
+      - name: Run tests
+        id: test
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: |
+          go test -v -race -coverprofile=coverage.out ./... 2>&1 | tee test.log
+          echo "status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Check formatting
+        id: fmt
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: |
+          # Проверяем, что go fmt не вносит изменений
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Formatting issues found:"
+            gofmt -d .
+            echo "status=1" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "status=0" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Build binary
+        id: build
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: |
+          go build -o ./bin/app ./cmd/... 2>&1 | tee build.log
+          echo "status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Set Docker image tag
+        id: docker-tag
+        run: |
+          OWNER="${{ tolower(github.repository_owner) }}"
+          REPO="${{ tolower(github.event.repository.name) }}"
+          SERVICE="${{ tolower(env.SERVICE_NAME) }}"
+          TAG="pr-${{ github.event.number }}"
+          echo "image=ghcr.io/${OWNER}/${REPO}/${SERVICE}:${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Log in to GHCR
+        if: steps.lint.outcome == 'success' && steps.test.outputs.status == 0 && steps.fmt.outputs.status == 0 && steps.build.outputs.status == 0
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.lint.outcome == 'success' && steps.test.outputs.status == 0 && steps.fmt.outputs.status == 0 && steps.build.outputs.status == 0
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ env.SERVICE_FOLDER }}
+          file: ./${{ env.SERVICE_FOLDER }}/Dockerfile
+          push: true
+          tags: ${{ steps.docker-tag.outputs.image }}
+
+      - name: Generate PR comment
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ github.event.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          SERVICE_FOLDER: ${{ env.SERVICE_FOLDER }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            function readLog(file) {
+              try {
+                return fs.readFileSync(file, 'utf8');
+              } catch {
+                return null;
+              }
+            }
+
+            function getStatusEmoji(outcome, exitCode) {
+              if (outcome === 'success') return '✅';
+              if (outcome === 'failure') return '❌';
+              return '⚪';
+            }
+
+            const lintOutcome = '${{ steps.lint.outcome }}';
+            const testStatus = '${{ steps.test.outputs.status }}' ? parseInt('${{ steps.test.outputs.status }}') : null;
+            const fmtStatus = '${{ steps.fmt.outputs.status }}' ? parseInt('${{ steps.fmt.outputs.status }}') : null;
+            const buildStatus = '${{ steps.build.outputs.status }}' ? parseInt('${{ steps.build.outputs.status }}') : null;
+
+            const testLog = readLog('test.log');
+            const buildLog = readLog('build.log');
+            // Линтер выводит в консоль, но можно получить подробности из actions output
+
+            let testSummary = '';
+            if (testLog) {
+              const match = testLog.match(/^ok\s+/gm);
+              const passed = (testLog.match(/^ok\s+/gm) || []).length;
+              const failed = (testLog.match(/^FAIL\s+/gm) || []).length;
+              testSummary = `**${passed}** packages passed, **${failed}** failed.`;
+            }
+
+            function extractWarnings(log, keyword = 'warning|error') {
+              if (!log) return '';
+              const lines = log.split('\n');
+              const warnings = lines.filter(line => new RegExp(keyword, 'i').test(line));
+              if (warnings.length === 0) return '';
+              const sample = warnings.slice(0, 10).join('\n');
+              return `\n<details><summary>${warnings.length} warnings/errors (first 10)</summary>\n\n\`\`\`\n${sample}\n\`\`\`\n</details>`;
+            }
+
+            let body = `### CI Build Summary for \`${process.env.SERVICE_FOLDER}\`\n\n`;
+            body += `| Stage | Status | Details |\n`;
+            body += `|-------|--------|---------|\n`;
+
+            // Lint
+            let lintDetails = lintOutcome === 'success' ? 'Linting passed.' : (lintOutcome === 'failure' ? 'Linting failed.' : 'Not executed.');
+            body += `| Lint | ${getStatusEmoji(lintOutcome)} | ${lintDetails} |\n`;
+
+            // Test
+            let testDetails = '';
+            if (testStatus === 0) {
+              testDetails = testSummary || 'All tests passed.';
+            } else if (testStatus != null) {
+              testDetails = 'Tests failed.' + extractWarnings(testLog, 'error|fail');
+            } else {
+              testDetails = 'Not executed.';
+            }
+            body += `| Test | ${getStatusEmoji(testStatus === 0 ? 'success' : 'failure')} | ${testDetails} |\n`;
+
+            // Format
+            let fmtDetails = '';
+            if (fmtStatus === 0) {
+              fmtDetails = 'Code style is correct.';
+            } else if (fmtStatus != null) {
+              fmtDetails = 'Formatting issues found.' + extractWarnings(buildLog, 'gofmt');
+            } else {
+              fmtDetails = 'Not executed.';
+            }
+            body += `| Format | ${getStatusEmoji(fmtStatus === 0 ? 'success' : 'failure')} | ${fmtDetails} |\n`;
+
+            // Build
+            let buildDetails = '';
+            if (buildStatus === 0) {
+              buildDetails = 'Build succeeded.';
+            } else if (buildStatus != null) {
+              buildDetails = 'Build failed.' + extractWarnings(buildLog, 'error');
+            } else {
+              buildDetails = 'Not executed.';
+            }
+            body += `| Build | ${getStatusEmoji(buildStatus === 0 ? 'success' : 'failure')} | ${buildDetails} |\n`;
+
+            if (lintOutcome === 'success' && testStatus === 0 && fmtStatus === 0 && buildStatus === 0) {
+              const imageTag = `${{ steps.docker-tag.outputs.image }}`;
+              body += `\n✅ Docker image \`${imageTag}\` pushed to GHCR.`;
+            }
+
+            const marker = '### CI Build Summary';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c => c.body.includes(marker) && c.user.type === 'Bot');
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+
+      - name: Check final status
+        if: always()
+        run: |
+          if [[ '${{ steps.lint.outcome }}' != 'success' ]]; then exit 1; fi
+          if [[ '${{ steps.test.outputs.status }}' != '0' ]]; then exit 1; fi
+          if [[ '${{ steps.fmt.outputs.status }}' != '0' ]]; then exit 1; fi
+          if [[ '${{ steps.build.outputs.status }}' != '0' ]]; then exit 1; fi
