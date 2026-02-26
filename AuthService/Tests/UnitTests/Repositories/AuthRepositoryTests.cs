@@ -18,7 +18,7 @@ public class AuthRepositoryTests
 
         _context = new ApplicationDbContext(options);
         _authRepository = new AuthRepository(_context);
-        
+
         SeedData();
     }
 
@@ -73,9 +73,9 @@ public class AuthRepositoryTests
     {
         const string newUserEmail = "newuser@example.com";
         var newUser = new Credentials(newUserEmail, "new_hashed_password", Role.Passenger);
-        
+
         var result = await _authRepository.CreateUserCredentials(newUser);
-        
+
         Assert.True(result);
         var savedUser = await _context.Credentials.FirstOrDefaultAsync(u => u.Email == newUserEmail);
         Assert.NotNull(savedUser);
@@ -87,9 +87,9 @@ public class AuthRepositoryTests
     {
         const int userId = 1;
         const string newPassword = "updated_password";
-        
+
         var result = await _authRepository.ChangePassword(userId, newPassword);
-        
+
         Assert.True(result);
         var updatedUser = await _context.Credentials.FindAsync(userId);
         Assert.NotNull(updatedUser);
@@ -101,7 +101,7 @@ public class AuthRepositoryTests
     {
         const int userId = 999;
         const string newPassword = "updated_password";
-        
+
         var result = await _authRepository.ChangePassword(userId, newPassword);
 
         Assert.False(result);

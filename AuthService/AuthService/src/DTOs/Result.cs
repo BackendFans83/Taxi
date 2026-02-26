@@ -16,7 +16,7 @@ public class Result
     public static Result Success(int statusCode = 200)
         => new(true, statusCode);
 
-    public static Result Failure(int statusCode = 500, string errorMessage = "") => 
+    public static Result Failure(int statusCode = 500, string errorMessage = "") =>
         new(false, statusCode, errorMessage);
 }
 

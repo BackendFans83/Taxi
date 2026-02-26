@@ -26,7 +26,7 @@ public class AuthRepository(DbContext authDbContext) : IAuthRepository
     {
         var user = await authDbContext.Set<Credentials>().FindAsync(id);
         if (user == null) return false;
-        
+
         user.ChangePassword(passwordHash);
         var result = await authDbContext.SaveChangesAsync();
         return result > 0;
