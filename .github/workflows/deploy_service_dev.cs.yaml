@@ -1,0 +1,274 @@
+name: CI for Microservice PR
+
+on:
+  pull_request:
+    branches:
+      - "dev/*-service"
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      service_kebab: ${{ steps.extract.outputs.service_kebab }}
+      service_pascal: ${{ steps.pascal.outputs.service_pascal }}
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Extract service name from base branch (kebab-case)
+        id: extract
+        run: |
+          BASE="${{ github.base_ref }}"
+          SERVICE_KEBAB="${BASE#dev/}"
+          echo "service_kebab=$SERVICE_KEBAB" >> $GITHUB_OUTPUT
+
+      - name: Convert to PascalCase (folder name)
+        id: pascal
+        run: |
+          KEBAB="${{ steps.extract.outputs.service_kebab }}"
+          # Преобразование: user-service → UserService
+          PASCAL=$(echo "$KEBAB" | sed -E 's/(^|-)([a-z])/\U\2/g')
+          echo "service_pascal=$PASCAL" >> $GITHUB_OUTPUT
+
+      - name: Check if folder exists
+        id: folder-exists
+        run: |
+          if [ -d "${{ steps.pascal.outputs.service_pascal }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get changed files in service folder
+        if: steps.folder-exists.outputs.exists == 'true'
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            ${{ steps.pascal.outputs.service_pascal }}/**/*
+
+      - name: Check for .cs files
+        id: check-cs
+        if: steps.folder-exists.outputs.exists == 'true'
+        run: |
+          has_cs=false
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ "$file" == *.cs ]]; then
+              has_cs=true
+              break
+            fi
+          done
+          echo "has_cs=$has_cs" >> $GITHUB_OUTPUT
+
+      - name: Determine if we should run
+        id: check
+        run: |
+          if [[ "${{ steps.folder-exists.outputs.exists }}" == "true" && "${{ steps.check-cs.outputs.has_cs }}" == "true" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SERVICE_FOLDER: ${{ needs.detect.outputs.service_pascal }}
+      SERVICE_NAME: ${{ needs.detect.outputs.service_kebab }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles(format('{0}/**/*.csproj', env.SERVICE_FOLDER)) }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: dotnet restore
+
+      - name: Build
+        id: build
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: |
+          dotnet build --configuration Release --no-restore 2>&1 | tee build.log
+          echo "status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Test
+        id: test
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: |
+          dotnet test --configuration Release --no-build --verbosity normal 2>&1 | tee test.log
+          echo "status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Check formatting
+        id: format
+        working-directory: ${{ env.SERVICE_FOLDER }}
+        run: |
+          dotnet format --verify-no-changes --verbosity diagnostic 2>&1 | tee format.log
+          echo "status=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Set Docker image tag
+        id: docker-tag
+        run: |
+          OWNER="${{ tolower(github.repository_owner) }}"
+          REPO="${{ tolower(github.event.repository.name) }}"
+          SERVICE="${{ tolower(env.SERVICE_NAME) }}"
+          TAG="pr-${{ github.event.number }}"
+          echo "image=ghcr.io/${OWNER}/${REPO}/${SERVICE}:${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Log in to GHCR
+        if: steps.build.outputs.status == 0 && steps.test.outputs.status == 0 && steps.format.outputs.status == 0
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.build.outputs.status == 0 && steps.test.outputs.status == 0 && steps.format.outputs.status == 0
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ env.SERVICE_FOLDER }}
+          file: ./${{ env.SERVICE_FOLDER }}/Dockerfile
+          push: true
+          tags: ${{ steps.docker-tag.outputs.image }}
+
+      - name: Generate PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { ISSUE_NUMBER, REPO_OWNER, REPO_NAME, SERVICE_FOLDER } = process.env;
+
+            function readLog(file) {
+              try {
+                return fs.readFileSync(file, 'utf8');
+              } catch {
+                return null;
+              }
+            }
+
+            function getStatusEmoji(exitCode, hasContent) {
+              if (exitCode === 0) return '✅';
+              if (exitCode != null && exitCode !== 0) return '❌';
+              return '⚪';
+            }
+
+            const buildStatus = '${{ steps.build.outputs.status }}' ? parseInt('${{ steps.build.outputs.status }}') : null;
+            const testStatus = '${{ steps.test.outputs.status }}' ? parseInt('${{ steps.test.outputs.status }}') : null;
+            const formatStatus = '${{ steps.format.outputs.status }}' ? parseInt('${{ steps.format.outputs.status }}') : null;
+
+            const buildLog = readLog('build.log');
+            const testLog = readLog('test.log');
+            const formatLog = readLog('format.log');
+
+            let testSummary = '';
+            if (testLog) {
+              const match = testLog.match(/Passed!\s+-\s+Failed:\s+(\d+),\s+Passed:\s+(\d+),\s+Skipped:\s+(\d+)/i);
+              if (match) {
+                testSummary = `**${match[2]}** tests passed, **${match[1]}** failed, **${match[3]}** skipped.`;
+              } else {
+                testSummary = 'Test count could not be parsed.';
+              }
+            }
+
+            function extractWarnings(log, keyword = 'warning|error') {
+              if (!log) return '';
+              const lines = log.split('\n');
+              const warnings = lines.filter(line => new RegExp(keyword, 'i').test(line));
+              if (warnings.length === 0) return '';
+              const sample = warnings.slice(0, 10).join('\n');
+              return `\n<details><summary>${warnings.length} warnings/errors (first 10)</summary>\n\n\`\`\`\n${sample}\n\`\`\`\n</details>`;
+            }
+
+            let body = `### CI Build Summary for \`${SERVICE_FOLDER}\`\n\n`;
+            body += `| Stage | Status | Details |\n`;
+            body += `|-------|--------|---------|\n`;
+
+            let buildDetails = '';
+            if (buildStatus === 0) {
+              buildDetails = 'Build succeeded.';
+            } else if (buildStatus != null) {
+              buildDetails = 'Build failed.' + extractWarnings(buildLog, 'error');
+            } else {
+              buildDetails = 'Not executed.';
+            }
+            body += `| Build | ${getStatusEmoji(buildStatus)} | ${buildDetails} |\n`;
+
+            let testDetails = '';
+            if (testStatus === 0) {
+              testDetails = testSummary || 'All tests passed.';
+            } else if (testStatus != null) {
+              testDetails = 'Tests failed.' + extractWarnings(testLog, 'error|failed');
+            } else {
+              testDetails = 'Not executed.';
+            }
+            body += `| Test | ${getStatusEmoji(testStatus)} | ${testDetails} |\n`;
+
+            let formatDetails = '';
+            if (formatStatus === 0) {
+              formatDetails = 'Code style is correct.';
+            } else if (formatStatus != null) {
+              formatDetails = 'Formatting issues found.' + extractWarnings(formatLog);
+            } else {
+              formatDetails = 'Not executed.';
+            }
+            body += `| Format | ${getStatusEmoji(formatStatus)} | ${formatDetails} |\n`;
+
+            if (buildStatus === 0 && testStatus === 0 && formatStatus === 0) {
+              const imageTag = `${{ steps.docker-tag.outputs.image }}`;
+              body += `\n✅ Docker image \`${imageTag}\` pushed to GHCR.`;
+            }
+
+            const marker = '### CI Build Summary';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c => c.body.includes(marker) && c.user.type === 'Bot');
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+
+      - name: Check build status
+        if: always()
+        run: |
+          if [[ '${{ steps.build.outputs.status }}' != '0' ]]; then exit 1; fi
+          if [[ '${{ steps.test.outputs.status }}' != '0' ]]; then exit 1; fi
+          if [[ '${{ steps.format.outputs.status }}' != '0' ]]; then exit 1; fi
