@@ -5,5 +5,5 @@ namespace UserService.Repositories;
 
 public class ReviewRepository(DbSet<Review> reviews) : IReviewRepository
 {
-    
+
 }

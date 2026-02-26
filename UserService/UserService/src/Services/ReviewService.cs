@@ -4,5 +4,5 @@ namespace UserService.Services;
 
 public class ReviewService(IReviewRepository reviewRepository) : IReviewService
 {
-    
+
 }
