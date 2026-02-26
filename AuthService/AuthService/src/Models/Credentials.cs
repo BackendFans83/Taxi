@@ -20,7 +20,7 @@ public class Credentials
         GoogleOAuthId = googleOAuthId;
         AppleOAuthId = appleOAuthId;
     }
-    
+
     public Credentials(int id, string email, string passwordHash, Role role, string? googleOAuthId = null,
         string? appleOAuthId = null)
     {

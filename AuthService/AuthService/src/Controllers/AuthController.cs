@@ -15,7 +15,7 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         if (!result.IsSuccess)
             return GetErrorResult(result);
-        
+
         var actionResult = await CreateRefreshTokenInCookie(result);
         return actionResult ?? Ok(result);
     }
@@ -31,13 +31,13 @@ public class AuthController(IAuthService authService) : ControllerBase
         var actionResult = await CreateRefreshTokenInCookie(result);
         return actionResult ?? Ok(result);
     }
-    
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
         throw new NotImplementedException();
     }
-    
+
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh()
     {
@@ -62,16 +62,16 @@ public class AuthController(IAuthService authService) : ControllerBase
     {
         throw new NotImplementedException();
     }
-    
+
     private async Task<IActionResult?> CreateRefreshTokenInCookie(Result<AuthResponse> result)
     {
         var refreshToken = await authService.GenerateRefreshToken(result.Value!.Id);
-        if(refreshToken == null)
+        if (refreshToken == null)
             return StatusCode(500, "Refresh token not created");
         HttpContext.Response.Cookies.Append("RefreshToken", refreshToken);
         return null;
     }
-    
+
     private IActionResult GetErrorResult(Result<AuthResponse> result)
     {
         var message = result.ErrorMessage;
