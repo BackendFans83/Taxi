@@ -131,9 +131,9 @@ jobs:
       - name: Set Docker image tag
         id: docker-tag
         run: |
-          OWNER="${{ tolower(github.repository_owner) }}"
-          REPO="${{ tolower(github.event.repository.name) }}"
-          SERVICE="${{ tolower(env.SERVICE_NAME) }}"
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          SERVICE=$(echo "${{ env.SERVICE_NAME }}" | tr '[:upper:]' '[:lower:]')
           TAG="pr-${{ github.event.number }}"
           echo "image=ghcr.io/${OWNER}/${REPO}/${SERVICE}:${TAG}" >> $GITHUB_OUTPUT
 
