@@ -4,5 +4,5 @@ namespace UserService.Services;
 
 public interface ICarService
 {
-    
+
 }

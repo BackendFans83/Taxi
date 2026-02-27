@@ -7,7 +7,7 @@ public class DriverProfile
     public int Id { get; set; }
     public string AvatarUrl { get; set; }
     public string Name { get; set; }
-    
+
     public bool IsBanned { get; set; }
     public int TotalRides { get; set; }
     public int TotalReviews { get; set; }
@@ -15,6 +15,6 @@ public class DriverProfile
 
     public string LicenseNumber { get; set; }
     public DateOnly LicenseExpiryDate { get; set; }
-    
+
     public int CurrentCarId { get; set; }
 }

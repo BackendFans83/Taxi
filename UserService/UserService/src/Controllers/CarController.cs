@@ -7,5 +7,5 @@ namespace UserService.Controllers;
 [Route("api/v1/[controller]")]
 public class CarController(ICarService carService) : ControllerBase
 {
-    
+
 }
