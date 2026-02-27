@@ -17,15 +17,15 @@ public class AuthService(
     {
         registerRequest.Email = registerRequest.Email.ToLower();
         var existingUser = await authRepository.GetUserCredentialsByEmail(registerRequest.Email);
-        
+
         if (existingUser != null)
             return Result<AuthResponse>.Failure(409, "User with this email already exists");
         if (!Enum.TryParse<Role>(registerRequest.Role, true, out var role))
             return Result<AuthResponse>.Failure(400, "Invalid role specified");
-        
+
         var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password, workFactor: 9);
         var credentials = new Credentials(registerRequest.Email, hashedPassword, role);
-        
+
         var createUserResult = await authRepository.CreateUserCredentials(credentials);
         if (!createUserResult)
             return Result<AuthResponse>.Failure(500, "Failed to create user account");
@@ -36,7 +36,7 @@ public class AuthService(
 
         var accessToken = accessTokenGenerator.GenerateAccessToken(savedUser.Id, savedUser.Role);
         var authResponse = new AuthResponse(savedUser.Id, accessToken);
-        
+
         return Result<AuthResponse>.Success(authResponse);
     }
 
