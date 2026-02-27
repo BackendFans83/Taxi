@@ -46,7 +46,7 @@ public class AuthControllerTests
         _mockAuthService.Setup(service => service.Register(registerRequest)).ReturnsAsync(result);
 
         var actionResult = await _authController.Register(registerRequest);
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult);
+        var badRequestResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
@@ -76,7 +76,7 @@ public class AuthControllerTests
         _mockAuthService.Setup(service => service.Login(loginRequest)).ReturnsAsync(result);
 
         var actionResult = await _authController.Login(loginRequest);
-        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(actionResult);
+        var unauthorizedResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(401, unauthorizedResult.StatusCode);
     }
 
@@ -131,7 +131,7 @@ public class AuthControllerTests
         _mockAuthService.Setup(service => service.Register(registerRequest)).ReturnsAsync(result);
 
         var actionResult = await _authController.Register(registerRequest);
-        var conflictResult = Assert.IsType<ConflictObjectResult>(actionResult);
+        var conflictResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(409, conflictResult.StatusCode);
     }
 
@@ -144,7 +144,7 @@ public class AuthControllerTests
         _mockAuthService.Setup(service => service.Login(loginRequest)).ReturnsAsync(result);
 
         var actionResult = await _authController.Login(loginRequest);
-        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(actionResult);
+        var unauthorizedResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(401, unauthorizedResult.StatusCode);
     }
 
@@ -189,7 +189,7 @@ public class AuthControllerTests
 
         var actionResult = await _authController.Logout();
 
-        var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(actionResult);
+        var unauthorizedResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(401, unauthorizedResult.StatusCode);
     }
 

@@ -14,7 +14,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         var result = await authService.Register(registerRequest);
 
         if (!result.IsSuccess)
-            return GetErrorResult(result);
+            return StatusCode(result.StatusCode, result.ErrorMessage);
 
         var actionResult = await CreateRefreshTokenInCookie(result);
         return actionResult ?? Ok(result);
@@ -26,7 +26,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         var result = await authService.Login(loginRequest);
 
         if (!result.IsSuccess)
-            return GetErrorResult(result);
+            return StatusCode(result.StatusCode, result.ErrorMessage);
 
         var actionResult = await CreateRefreshTokenInCookie(result);
         return actionResult ?? Ok(result);
@@ -42,7 +42,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         var result = await authService.Logout(refreshToken);
 
         if (!result.IsSuccess)
-            return GetErrorResult(result);
+            return StatusCode(result.StatusCode, result.ErrorMessage);
         HttpContext.Response.Cookies.Delete("RefreshToken");
         return Ok(result);
     }
@@ -79,18 +79,5 @@ public class AuthController(IAuthService authService) : ControllerBase
             return StatusCode(500, "Refresh token not created");
         HttpContext.Response.Cookies.Append("RefreshToken", refreshToken);
         return null;
-    }
-    
-    private IActionResult GetErrorResult(Result result)
-    {
-        var message = result.ErrorMessage;
-        return result.StatusCode switch
-        {
-            400 => BadRequest(message),
-            401 => Unauthorized(message),
-            409 => Conflict(message),
-            500 => StatusCode(500, message),
-            _ => StatusCode(result.StatusCode, message)
-        };
     }
 }

@@ -32,7 +32,6 @@ namespace Tests.UnitTests.Services
         [Fact]
         public async Task Register_ValidRequest_CreatesUserSuccessfully()
         {
-            var callbacks = 0;
             var registerRequest = new RegisterRequest("John Doe", "john@example.com", "password123", "Passenger");
             const string accessToken = "access_token";
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password);
