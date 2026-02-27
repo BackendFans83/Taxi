@@ -46,7 +46,7 @@ public class AuthControllerTests
         _mockAuthService.Setup(service => service.Register(registerRequest)).ReturnsAsync(result);
 
         var actionResult = await _authController.Register(registerRequest);
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult);
+        var badRequestResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(400, badRequestResult.StatusCode);
     }
 
@@ -131,7 +131,7 @@ public class AuthControllerTests
         _mockAuthService.Setup(service => service.Register(registerRequest)).ReturnsAsync(result);
 
         var actionResult = await _authController.Register(registerRequest);
-        var conflictResult = Assert.IsType<ConflictObjectResult>(actionResult);
+        var conflictResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(409, conflictResult.StatusCode);
     }
 
@@ -146,5 +146,66 @@ public class AuthControllerTests
         var actionResult = await _authController.Login(loginRequest);
         var unauthorizedResult = Assert.IsType<ObjectResult>(actionResult);
         Assert.Equal(401, unauthorizedResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_ValidRefreshToken_ReturnsOkResult()
+    {
+        const string refreshToken = "valid_refresh_token";
+        var result = Result.Success();
+        _mockAuthService.Setup(service => service.Logout(refreshToken)).ReturnsAsync(result);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers.Append("Cookie", $"RefreshToken={refreshToken}");
+        _authController.ControllerContext.HttpContext = httpContext;
+
+        var actionResult = await _authController.Logout();
+
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+        var returnValue = Assert.IsType<Result>(okResult.Value);
+        Assert.True(returnValue.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Logout_MissingRefreshToken_ReturnsBadRequest()
+    {
+        var httpContext = new DefaultHttpContext();
+        _authController.ControllerContext.HttpContext = httpContext;
+
+        var actionResult = await _authController.Logout();
+
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(actionResult);
+        Assert.Equal("Refresh token not found", badRequestResult.Value);
+    }
+
+    [Fact]
+    public async Task Logout_InvalidRefreshToken_ReturnsUnauthorized()
+    {
+        const string refreshToken = "invalid_refresh_token";
+        var result = Result.Failure(401, "Invalid refresh token");
+        _mockAuthService.Setup(service => service.Logout(refreshToken)).ReturnsAsync(result);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers.Append("Cookie", $"RefreshToken={refreshToken}");
+        _authController.ControllerContext.HttpContext = httpContext;
+
+        var actionResult = await _authController.Logout();
+
+        var unauthorizedResult = Assert.IsType<ObjectResult>(actionResult);
+        Assert.Equal(401, unauthorizedResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_ServiceReturnsFailure_ReturnsInternalServerError()
+    {
+        const string refreshToken = "refresh_token";
+        var result = Result.Failure(500, "Failed to logout");
+        _mockAuthService.Setup(service => service.Logout(refreshToken)).ReturnsAsync(result);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers.Append("Cookie", $"RefreshToken={refreshToken}");
+        _authController.ControllerContext.HttpContext = httpContext;
+
+        var actionResult = await _authController.Logout();
+
+        var internalErrorResult = Assert.IsType<ObjectResult>(actionResult);
+        Assert.Equal(500, internalErrorResult.StatusCode);
     }
 }

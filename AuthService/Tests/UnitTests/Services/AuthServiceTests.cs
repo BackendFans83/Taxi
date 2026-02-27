@@ -32,7 +32,6 @@ namespace Tests.UnitTests.Services
         [Fact]
         public async Task Register_ValidRequest_CreatesUserSuccessfully()
         {
-            var callbacks = 0;
             var registerRequest = new RegisterRequest("John Doe", "john@example.com", "password123", "Passenger");
             const string accessToken = "access_token";
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password);
@@ -275,13 +274,15 @@ namespace Tests.UnitTests.Services
 
             foreach (var roleStr in roles)
             {
-                var registerRequest = new RegisterRequest("Test User", $"test_{roleStr}@example.com".ToLower(), "password123", roleStr);
+                var registerRequest = new RegisterRequest("Test User", $"test_{roleStr}@example.com".ToLower(),
+                    "password123", roleStr);
                 var hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password);
                 const int userId = 1;
 
                 _mockAuthRepository.SetupSequence(x => x.GetUserCredentialsByEmail(registerRequest.Email))
                     .ReturnsAsync((Credentials?)null)
-                    .ReturnsAsync(new Credentials(userId, registerRequest.Email, hashedPassword, Enum.Parse<Role>(roleStr)));
+                    .ReturnsAsync(new Credentials(userId, registerRequest.Email, hashedPassword,
+                        Enum.Parse<Role>(roleStr)));
                 _mockAuthRepository.Setup(x => x.CreateUserCredentials(It.IsAny<Credentials>()))
                     .ReturnsAsync(true);
                 _mockAccessTokenGenerator.Setup(x => x.GenerateAccessToken(userId, Enum.Parse<Role>(roleStr)))
@@ -293,6 +294,52 @@ namespace Tests.UnitTests.Services
                 Assert.NotNull(result.Value);
                 Assert.Equal(accessToken, result.Value.AccessToken);
             }
+        }
+
+        [Fact]
+        public async Task Logout_ValidRefreshToken_ReturnsSuccess()
+        {
+            const string refreshToken = "valid_refresh_token";
+            const int userId = 1;
+            _mockCacheRepository.Setup(x => x.GetUserIdByRefreshToken(refreshToken))
+                .ReturnsAsync(userId);
+            _mockCacheRepository.Setup(x => x.DeleteRefreshToken(refreshToken))
+                .ReturnsAsync(true);
+
+            var result = await _authService.Logout(refreshToken);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(200, result.StatusCode);
+            _mockCacheRepository.Verify(x => x.DeleteRefreshToken(refreshToken), Times.Once);
+        }
+
+        [Fact]
+        public async Task Logout_InvalidRefreshToken_ReturnsUnauthorized()
+        {
+            const string refreshToken = "invalid_refresh_token";
+            _mockCacheRepository.Setup(x => x.GetUserIdByRefreshToken(refreshToken)).ReturnsAsync((int?)null);
+
+            var result = await _authService.Logout(refreshToken);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(401, result.StatusCode);
+            Assert.Equal("Invalid refresh token", result.ErrorMessage);
+            _mockCacheRepository.Verify(x => x.DeleteRefreshToken(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Logout_DeleteRefreshTokenFails_ReturnsFailure()
+        {
+            const string refreshToken = "refresh_token";
+            const int userId = 1;
+            _mockCacheRepository.Setup(x => x.GetUserIdByRefreshToken(refreshToken)).ReturnsAsync(userId);
+            _mockCacheRepository.Setup(x => x.DeleteRefreshToken(refreshToken)).ReturnsAsync(false);
+
+            var result = await _authService.Logout(refreshToken);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(500, result.StatusCode);
+            Assert.Equal("Failed to logout", result.ErrorMessage);
         }
     }
 }

@@ -14,7 +14,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         var result = await authService.Register(registerRequest);
 
         if (!result.IsSuccess)
-            return GetErrorResult(result);
+            return StatusCode(result.StatusCode, result.ErrorMessage);
 
         var actionResult = await CreateRefreshTokenInCookie(result);
         return actionResult ?? Ok(result);
@@ -26,7 +26,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         var result = await authService.Login(loginRequest);
 
         if (!result.IsSuccess)
-            return GetErrorResult(result);
+            return StatusCode(result.StatusCode, result.ErrorMessage);
 
         var actionResult = await CreateRefreshTokenInCookie(result);
         return actionResult ?? Ok(result);
@@ -35,7 +35,16 @@ public class AuthController(IAuthService authService) : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
-        throw new NotImplementedException();
+        var refreshToken = HttpContext.Request.Cookies["RefreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return BadRequest("Refresh token not found");
+
+        var result = await authService.Logout(refreshToken);
+
+        if (!result.IsSuccess)
+            return StatusCode(result.StatusCode, result.ErrorMessage);
+        HttpContext.Response.Cookies.Delete("RefreshToken");
+        return Ok(result);
     }
 
     [HttpPost("refresh")]
@@ -70,17 +79,5 @@ public class AuthController(IAuthService authService) : ControllerBase
             return StatusCode(500, "Refresh token not created");
         HttpContext.Response.Cookies.Append("RefreshToken", refreshToken);
         return null;
-    }
-
-    private IActionResult GetErrorResult(Result<AuthResponse> result)
-    {
-        var message = result.ErrorMessage;
-        return result.StatusCode switch
-        {
-            400 => BadRequest(message),
-            409 => Conflict(message),
-            500 => StatusCode(500, message),
-            _ => StatusCode(result.StatusCode, message)
-        };
     }
 }
