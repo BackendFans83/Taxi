@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using UserService.Consumers;
 using UserService.Data;
 using UserService.Repositories;
 using UserService.Services;
@@ -9,7 +10,7 @@ using UserService.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 var necessaryConfigs = new List<string>
-    { "Jwt:Issuer", "Jwt:Audience", "Jwt:SecretKey" };
+    { "Jwt:Issuer", "Jwt:Audience", "Jwt:SecretKey", "Kafka:BootstrapServers", "Kafka:Topic", "Kafka:GroupId" };
 foreach (var necessaryConfig in necessaryConfigs)
     if (string.IsNullOrWhiteSpace(builder.Configuration[necessaryConfig]))
         throw new InvalidOperationException(necessaryConfig + " not found");
@@ -31,6 +32,7 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICarRepository, CarRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
+builder.Services.AddHostedService<KafkaConsumer>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
