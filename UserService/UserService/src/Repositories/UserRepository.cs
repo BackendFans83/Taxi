@@ -1,9 +1,8 @@
-using Microsoft.EntityFrameworkCore;
-using UserService.Models;
+using UserService.Data;
 
 namespace UserService.Repositories;
 
-public class UserRepository(DbSet<PassengerProfile> passengerProfiles, DbSet<DriverProfile> driverProfiles) : IUserRepository
+public class UserRepository(ApplicationDbContext dbContext) : IUserRepository
 {
 
 }

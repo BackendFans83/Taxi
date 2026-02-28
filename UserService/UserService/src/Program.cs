@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using UserService.Data;
-using UserService.Models;
 using UserService.Repositories;
 using UserService.Services;
 
@@ -24,20 +23,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(postgresConnectionString).UseSnakeCaseNamingConvention();
 });
-builder.Services.AddScoped<IUserRepository>(provider =>
-{
-    var passengers = provider.GetRequiredService<ApplicationDbContext>().Set<PassengerProfile>();
-    var drivers = provider.GetRequiredService<ApplicationDbContext>().Set<DriverProfile>();
-    return new UserRepository(passengers, drivers);
-});
-builder.Services.AddScoped<ICarRepository>(provider =>
-    new CarRepository(provider.GetRequiredService<ApplicationDbContext>().Set<Car>()));
-builder.Services.AddScoped<IReviewRepository>(provider =>
-    new ReviewRepository(provider.GetRequiredService<ApplicationDbContext>().Set<Review>()));
 
 builder.Services.AddScoped<IUserService, UserService.Services.UserService>();
 builder.Services.AddScoped<ICarService, CarService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ICarRepository, CarRepository>();
+builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

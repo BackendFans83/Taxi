@@ -1,9 +1,8 @@
-using Microsoft.EntityFrameworkCore;
-using UserService.Models;
+using UserService.Data;
 
 namespace UserService.Repositories;
 
-public class ReviewRepository(DbSet<Review> reviews) : IReviewRepository
+public class ReviewRepository(ApplicationDbContext dbContext) : IReviewRepository
 {
 
 }
