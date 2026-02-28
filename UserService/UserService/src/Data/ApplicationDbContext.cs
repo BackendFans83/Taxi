@@ -5,10 +5,10 @@ namespace UserService.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
-    DbSet<Car> Cars { get; set; }
-    DbSet<Review> Review { get; set; }
-    DbSet<PassengerProfile> PassengerProfiles { get; set; }
-    DbSet<DriverProfile> DriverProfiles { get; set; }
+    public DbSet<Car> Cars { get; set; }
+    public DbSet<Review> Review { get; set; }
+    public DbSet<PassengerProfile> PassengerProfiles { get; set; }
+    public DbSet<DriverProfile> DriverProfiles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
