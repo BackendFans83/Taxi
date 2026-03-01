@@ -11,19 +11,20 @@ public class UserService(IUserRepository userRepository) : IUserService
     {
         if (!Enum.TryParse<Role>(user.Role, ignoreCase: true, out var role))
             return Result.Failure(400, "Invalid role");
-
         switch (role)
         {
             case Role.Passenger:
             case Role.Admin:
                 var passengerProfile = new PassengerProfile(user.Id, user.Name);
-                await userRepository.CreatePassengerProfileAsync(passengerProfile);
-                return Result.Success();
+                return await userRepository.CreatePassengerProfileAsync(passengerProfile)
+                    ? Result.Success()
+                    : Result.Failure(409, $"Passenger profile with id {user.Id} already exists");
 
             case Role.Driver:
                 var driverProfile = new DriverProfile(user.Id, user.Name);
-                await userRepository.CreateDriverProfileAsync(driverProfile);
-                return Result.Success();
+                return await userRepository.CreateDriverProfileAsync(driverProfile)
+                    ? Result.Success()
+                    : Result.Failure(409, $"Passenger profile with id {user.Id} already exists");
 
             default:
                 return Result.Failure(400, "Unknown role");
