@@ -6,16 +6,22 @@ namespace UserService.Repositories;
 
 public class UserRepository(ApplicationDbContext dbContext) : IUserRepository
 {
-    public async Task CreatePassengerProfileAsync(PassengerProfile profile)
+    public async Task<bool> CreatePassengerProfileAsync(PassengerProfile profile)
     {
+        if(await dbContext.PassengerProfiles.FindAsync(profile.Id) is not null)
+            return false;
         dbContext.PassengerProfiles.Add(profile);
         await dbContext.SaveChangesAsync();
+        return true;
     }
 
-    public async Task CreateDriverProfileAsync(DriverProfile profile)
+    public async Task<bool> CreateDriverProfileAsync(DriverProfile profile)
     {
+        if(await dbContext.PassengerProfiles.FindAsync(profile.Id) is not null)
+            return false;
         dbContext.DriverProfiles.Add(profile);
         await dbContext.SaveChangesAsync();
+        return true;
     }
 
     public async Task<PassengerProfile?> GetPassengerByIdAsync(int id)

@@ -92,7 +92,9 @@ public class KafkaConsumer : BackgroundService
             var userDto = json.RootElement.GetProperty("Data").Deserialize<CreateUserDto>();
             if (userDto == null)
                 throw new JsonException("Deserialize object is null");
-            await userService.CreateUser(userDto);
+            var result = await userService.CreateUser(userDto);
+            if(!result.IsSuccess)
+                throw new ArgumentException(result.ErrorMessage);
         }
         else
             logger.LogWarning($"Received unknown event: {eventType}");
