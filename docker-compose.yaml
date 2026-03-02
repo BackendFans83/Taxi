@@ -1,0 +1,264 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:18.3
+    container_name: shared-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_MULTIPLE_DATABASES: user_service,ride_service
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+    networks:
+      - backend
+
+  redis:
+    image: redis:8.6.11
+    container_name: shared-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+
+  user-service:
+    image: ghcr.io/backendfans83/taxi/user-service:dev
+    environment:
+      DATABASE_URL: postgresql://user_service__user:user_service__pass123@postgres:5432/user_service
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - user-api
+
+  ride-service:
+    image: ghcr.io/backendfans83/taxi/ride-service:dev
+    environment:
+      DATABASE_URL: postgresql://ride_service__user:ride_service__pass123@postgres:5432/ride_service
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - ride-api
+
+  auth-service:
+    image: ghcr.io/backendfans83/taxi/auth-service:dev
+    # environment:
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - auth-api
+
+  admin-service:
+    image: ghcr.io/backendfans83/taxi/admin-service:dev
+    # environment:
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - admin-api
+
+  matching_and_pricing-service:
+    image: ghcr.io/backendfans83/taxi/matching-and-pricing-service:dev
+    # environment:
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - matching-and-pricing-api
+
+  location-service:
+    image: ghcr.io/backendfans83/taxi/location-service:dev
+    # environment:
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - location-api
+
+  payment-service:
+    image: ghcr.io/backendfans83/taxi/payment-service:dev
+    # environment:
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - payment-api
+
+  notification-service:
+    image: ghcr.io/backendfans83/taxi/notification-service:dev
+    # environment:
+    restart: always
+    expose:
+      - "8383"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8383/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    depends_on:
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - notification-api
+
+
+  passenger-client:
+    image: ghcr.io/backendfans83/taxi/passenger-client:dev
+    container_name: taxi-passenger
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+      "1000:1000"
+    restart: unless-stopped
+    networks:
+      backend:
+        aliases:
+          - passenger-client
+
+  driver-client:
+    image: ghcr.io/backendfans83/taxi/driver-client:dev
+    container_name: taxi-driver
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+        "1000:1000"
+    restart: unless-stopped
+    networks:
+      backend:
+        aliases:
+          - driver-client
+
+  admin-client:
+    image: ghcr.io/backendfans83/taxi/admin-client:dev
+    container_name: taxi-admin
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    user:
+        "1000:1000"
+    restart: unless-stopped
+    networks:
+      backend:
+        aliases:
+          - admin-client
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  backend:
