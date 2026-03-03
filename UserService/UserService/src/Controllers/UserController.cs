@@ -2,6 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using UserService.Attributes;
 using UserService.DTOs;
 using UserService.Enums;
 using UserService.Services;
@@ -14,6 +16,8 @@ namespace UserService.Controllers;
 public class UserController(IUserService userService) : ControllerBase
 {
     [HttpGet("me")]
+    [ProducesResponseType(typeof(PassengerProfileDto),200)]
+    [SwaggerOneOfResponse(typeof(PassengerProfileDto), typeof(DriverProfileDto))]
     public async Task<ActionResult<object>> GetCurrentUserProfile()
     {
         var userId = GetUserIdFromClaims();
@@ -43,6 +47,9 @@ public class UserController(IUserService userService) : ControllerBase
     }
 
     [HttpPut("me")]
+    [ProducesResponseType(typeof(PassengerProfileDto),200)]
+    [SwaggerOneOfRequest(typeof(UpdatePassengerProfileRequest), typeof(UpdateDriverProfileRequest))]
+    [SwaggerOneOfResponse(typeof(PassengerProfileDto), typeof(DriverProfileDto))]
     public async Task<ActionResult<object>> UpdateCurrentUserProfile([FromBody] object request)
     {
         var userId = GetUserIdFromClaims();
