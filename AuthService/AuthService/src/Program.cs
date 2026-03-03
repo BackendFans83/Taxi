@@ -7,6 +7,7 @@ using AuthService.Utils;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,7 @@ if (string.IsNullOrEmpty(builder.Configuration["Client:Url"]))
     throw new InvalidOperationException("Client:Url not found");
 
 #region services_DI
+
 builder.Services.AddControllers();
 builder.Services.AddScoped<IAuthService, AuthService.Services.AuthService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
@@ -33,9 +35,11 @@ builder.Services.AddHttpClient<GoogleOAuthClient>();
 builder.Services.AddHttpClient<AppleOAuthClient>();
 builder.Services.AddScoped<IOAuthClient>(sp => sp.GetRequiredService<GoogleOAuthClient>());
 builder.Services.AddScoped<IOAuthClient>(sp => sp.GetRequiredService<AppleOAuthClient>());
+
 #endregion
 
 #region db_connections
+
 var postgresConnectionString = builder.Configuration.GetConnectionString("PostgresConnectionString");
 if (postgresConnectionString == null)
     throw new InvalidOperationException("PostgresConnectionString not found");
@@ -48,9 +52,11 @@ var redisConnectionString = builder.Configuration.GetConnectionString("RedisConn
 if (redisConnectionString == null)
     throw new InvalidOperationException("RedisConnectionString not found");
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConnectionString));
+
 #endregion
 
 #region auth
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -70,7 +76,25 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddAuthorization();
+
 #endregion
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Taxi Auth Service",
+        Version = "v1"
+    });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+    });
+});
 
 var app = builder.Build();
 
@@ -81,5 +105,11 @@ app.UseCors(p =>
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Taxi Auth Service"); });
+}
 
 app.Run();
