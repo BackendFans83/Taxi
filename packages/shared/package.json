@@ -1,0 +1,56 @@
+{
+  "name": "@taxi/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./global.css": {
+      "types": "./src/global.css",
+      "default": "./src/global.css"
+    },
+    "./api": {
+      "types": "./src/api/index.ts",
+      "default": "./src/api/index.ts"
+    },
+    "./api/*": {
+      "types": "./src/api/*.ts",
+      "default": "./src/api/*.ts"
+    },
+    "./ui/*": {
+      "types": "./src/ui/*.ts",
+      "default": "./src/ui/*.ts"
+    },
+    "./lib/*": {
+      "types": "./src/lib/*.ts",
+      "default": "./src/lib/*.ts"
+    },
+    "./types/*": {
+      "types": "./src/types/*.ts",
+      "default": "./src/types/*.ts"
+    }
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.10"
+  },
+  "devDependencies": {
+    "solid-js": "^1.9.10",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vite-bundle-visualizer": "^1.2.1"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "axios": "^1.13.6"
+  },
+  "imports": {
+    "#*": [
+      "./*",
+      "./*.ts",
+      "./*.tsx"
+    ]
+  }
+}
