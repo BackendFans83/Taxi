@@ -1,0 +1,99 @@
+.switch-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 400px;
+}
+
+.switch-wrapper > :first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.switch {
+  position: relative;
+  width: 56px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switch-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--divider);
+  transition: var(--transition);
+  border-radius: 28px;
+}
+
+.switch-slider::before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: var(--transition);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.switch-input:checked + .switch-slider {
+  background-color: var(--primary);
+}
+
+.switch-input:checked + .switch-slider::before {
+  transform: translateX(28px);
+}
+
+.switch-input:focus + .switch-slider {
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.switch-input:disabled + .switch-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switch-input:disabled ~ .switch-label,
+.switch-wrapper-disabled .switch-label {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switch-label {
+  color: var(--text-primary);
+  font-size: 16px;
+  user-select: none;
+}
+
+.switch-wrapper-error .switch-slider {
+  border-color: var(--error);
+}
+
+.switch-wrapper-error .switch-input:checked + .switch-slider {
+  background-color: var(--error);
+}
+
+.switch-error-caption {
+  color: var(--error);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.switch-wrapper-disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
