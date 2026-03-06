@@ -1,0 +1,46 @@
+.checkbox {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    width: fit-content;
+}
+
+.checkboxLabel input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    margin: 0;
+}
+
+.checkboxText {
+    font-size: 16px;
+    color: var(--text-primary);
+    user-select: none;
+}
+
+.checkbox-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.checkbox-disabled .checkboxLabel {
+    cursor: not-allowed;
+}
+
+.checkbox-error .checkboxLabel input[type="checkbox"] {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+.checkbox-error-caption {
+    color: var(--error);
+    margin-top: 2px;
+}

@@ -1,0 +1,41 @@
+.typography-h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.typography-h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.typography-h3 {
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.typography-h4 {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.typography-body {
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.typography-caption {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.typography-overline {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+}

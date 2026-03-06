@@ -1,0 +1,41 @@
+.paper {
+  background: var(--surface);
+  border-radius: var(--radius);
+  transition: var(--transition);
+}
+
+.paper-elevation-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.paper-elevation-md {
+  box-shadow: var(--shadow-md);
+}
+
+.paper-elevation-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.paper-elevation-none {
+  box-shadow: none;
+}
+
+.paper-padding-sm {
+  padding: 12px;
+}
+
+.paper-padding-md {
+  padding: 24px;
+}
+
+.paper-padding-lg {
+  padding: 32px;
+}
+
+.paper-padding-none {
+  padding: 0;
+}
+
+.paper-outlined {
+  border: 1px solid var(--divider);
+}

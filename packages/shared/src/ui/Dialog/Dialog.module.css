@@ -1,0 +1,52 @@
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+}
+
+.dialog-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dialog {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  transform: scale(0.9);
+  transition: var(--transition);
+}
+
+.dialog-overlay.active .dialog {
+  transform: scale(1);
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.dialog-content {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

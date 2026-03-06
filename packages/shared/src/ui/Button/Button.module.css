@@ -1,0 +1,83 @@
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+    outline: none;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-contained {
+    background: var(--secondary);
+    color: white;
+}
+
+.btn-contained:hover {
+    background: var(--secondary-light);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-text {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.btn-text:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.btn-disabled {
+    background: var(--divider);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+}
+
+/* IconButton */
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    color: var(--text-secondary);
+}
+
+.icon-btn:hover {
+    background: rgba(0,0,0,0.05);
+    color: var(--text-primary);
+}
+
+.icon-btn-primary {
+    color: var(--primary);
+}
+
+.icon-btn-secondary {
+    color: var(--secondary);
+}
+
+.icon-btn-primary:hover {
+    background: var(--primary-light);
+}

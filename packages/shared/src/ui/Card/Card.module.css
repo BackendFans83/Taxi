@@ -1,0 +1,28 @@
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.card-media {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+
+.card-content {
+  padding: 16px;
+}
+
+.card-actions {
+  padding: 16px;
+  display: flex;
+  gap: 8px;
+}
