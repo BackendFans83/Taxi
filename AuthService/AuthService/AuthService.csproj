@@ -16,6 +16,7 @@
 
     <ItemGroup>
       <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+      <PackageReference Include="Confluent.Kafka" Version="2.13.2" />
       <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
