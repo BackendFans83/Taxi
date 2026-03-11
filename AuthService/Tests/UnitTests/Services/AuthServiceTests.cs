@@ -213,7 +213,7 @@ namespace Tests.UnitTests.Services
             const string accessToken = "access_token";
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword("password123");
 
-            var roles = new[] { Role.Passenger, Role.Rider, Role.Admin };
+            var roles = new[] { Role.Passenger, Role.Driver, Role.Admin };
 
             foreach (var role in roles)
             {
@@ -270,7 +270,7 @@ namespace Tests.UnitTests.Services
         public async Task Register_DifferentRoles_ReturnsSuccess()
         {
             const string accessToken = "access_token";
-            var roles = new[] { "Passenger", "Rider", "Admin" };
+            var roles = new[] { "Passenger", "Driver", "Admin" };
 
             foreach (var roleStr in roles)
             {

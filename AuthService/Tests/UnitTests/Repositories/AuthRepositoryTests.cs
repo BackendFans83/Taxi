@@ -26,7 +26,7 @@ public class AuthRepositoryTests
     {
         _context.Credentials.AddRange(
             new Credentials(1, "user1@example.com", "hashed_password_1", Role.Passenger),
-            new Credentials(2, "user2@example.com", "hashed_password_2", Role.Rider),
+            new Credentials(2, "user2@example.com", "hashed_password_2", Role.Driver),
             new Credentials(3, "admin@example.com", "hashed_password_3", Role.Admin)
         );
         _context.SaveChanges();

@@ -99,7 +99,7 @@ public class JwtAccessTokenGeneratorTests
     public void GenerateAccessToken_WithRiderRole_ReturnsValidToken()
     {
         var userId = 5;
-        var role = Role.Rider;
+        var role = Role.Driver;
 
         var token = _jwtAccessTokenGenerator.GenerateAccessToken(userId, role);
 
