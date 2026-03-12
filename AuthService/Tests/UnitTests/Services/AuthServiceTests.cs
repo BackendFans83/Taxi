@@ -1,6 +1,7 @@
 using AuthService.DTOs;
 using AuthService.Enums;
 using AuthService.Models;
+using AuthService.Producers;
 using AuthService.Repositories;
 using AuthService.Utils;
 using Moq;
@@ -13,6 +14,7 @@ namespace Tests.UnitTests.Services
         private readonly Mock<ICacheRepository> _mockCacheRepository;
         private readonly Mock<IAccessTokenGenerator> _mockAccessTokenGenerator;
         private readonly Mock<IRefreshTokenGenerator> _mockRefreshTokenGenerator;
+        private readonly Mock<IKafkaProducer> _mockKafkaProducer;
         private readonly AuthService.Services.AuthService _authService;
 
         public AuthServiceTests()
@@ -21,11 +23,13 @@ namespace Tests.UnitTests.Services
             _mockCacheRepository = new Mock<ICacheRepository>();
             _mockAccessTokenGenerator = new Mock<IAccessTokenGenerator>();
             _mockRefreshTokenGenerator = new Mock<IRefreshTokenGenerator>();
+            _mockKafkaProducer = new Mock<IKafkaProducer>();
             _authService = new AuthService.Services.AuthService(
                 _mockAuthRepository.Object,
                 _mockCacheRepository.Object,
                 _mockAccessTokenGenerator.Object,
-                _mockRefreshTokenGenerator.Object
+                _mockRefreshTokenGenerator.Object,
+                _mockKafkaProducer.Object
             );
         }
 

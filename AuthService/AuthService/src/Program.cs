@@ -1,6 +1,7 @@
 using System.Text;
 using AuthService.Clients;
 using AuthService.Data;
+using AuthService.Producers;
 using AuthService.Repositories;
 using AuthService.Services;
 using AuthService.Utils;
@@ -12,14 +13,11 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (string.IsNullOrEmpty(builder.Configuration["Jwt:Issuer"]))
-    throw new InvalidOperationException("Jwt:Issuer not found");
-if (string.IsNullOrEmpty(builder.Configuration["Jwt:Audience"]))
-    throw new InvalidOperationException("Jwt:Audience not found");
-if (string.IsNullOrEmpty(builder.Configuration["Jwt:SecretKey"]))
-    throw new InvalidOperationException("Jwt:SecretKey not found");
-if (string.IsNullOrEmpty(builder.Configuration["Client:Url"]))
-    throw new InvalidOperationException("Client:Url not found");
+var necessaryConfigs = new List<string>
+    { "Jwt:Issuer", "Jwt:Audience", "Jwt:SecretKey", "Kafka:BootstrapServers", "Kafka:UserTopic", "Kafka:GroupId", "Kafka:UserRegisteredEvent" };
+foreach (var necessaryConfig in necessaryConfigs)
+    if (string.IsNullOrWhiteSpace(builder.Configuration[necessaryConfig]))
+        throw new InvalidOperationException(necessaryConfig + " not found");
 
 #region services_DI
 
@@ -35,6 +33,8 @@ builder.Services.AddHttpClient<GoogleOAuthClient>();
 builder.Services.AddHttpClient<AppleOAuthClient>();
 builder.Services.AddScoped<IOAuthClient>(sp => sp.GetRequiredService<GoogleOAuthClient>());
 builder.Services.AddScoped<IOAuthClient>(sp => sp.GetRequiredService<AppleOAuthClient>());
+
+builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
 #endregion
 

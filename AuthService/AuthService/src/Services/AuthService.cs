@@ -1,6 +1,7 @@
 using AuthService.DTOs;
 using AuthService.Enums;
 using AuthService.Models;
+using AuthService.Producers;
 using AuthService.Repositories;
 using AuthService.Utils;
 
@@ -10,7 +11,8 @@ public class AuthService(
     IAuthRepository authRepository,
     ICacheRepository cacheRepository,
     IAccessTokenGenerator accessTokenGenerator,
-    IRefreshTokenGenerator refreshTokenGenerator)
+    IRefreshTokenGenerator refreshTokenGenerator,
+    IKafkaProducer kafkaProducer)
     : IAuthService
 {
     public async Task<Result<AuthResponse>> Register(RegisterRequest registerRequest)
@@ -34,6 +36,9 @@ public class AuthService(
         if (savedUser == null)
             return Result<AuthResponse>.Failure(500, "Failed to retrieve created user");
 
+        var kafkaResult = await kafkaProducer.SendUserRegisteredEventAsync(new CreateUserDto(savedUser.Id,
+            registerRequest.Name, registerRequest.Role));
+        
         var accessToken = accessTokenGenerator.GenerateAccessToken(savedUser.Id, savedUser.Role);
         var authResponse = new AuthResponse(savedUser.Id, accessToken);
 
