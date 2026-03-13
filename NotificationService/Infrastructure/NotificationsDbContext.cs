@@ -10,6 +10,5 @@ public class NotificationsDbContext : DbContext
     public NotificationsDbContext(DbContextOptions<NotificationsDbContext> options)
         : base(options)
     {
-        Database.EnsureCreated();
     }
 }

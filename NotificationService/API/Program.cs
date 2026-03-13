@@ -1,5 +1,4 @@
 using API.ExtensionMethods;
-using Domain.Enums;
 using DotNetEnv;
 using Infrastructure;
 using Infrastructure.Entities;
@@ -21,7 +20,7 @@ public class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-        
+
         app.Run();
     }
 }
