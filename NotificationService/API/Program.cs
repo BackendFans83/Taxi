@@ -1,5 +1,4 @@
 using API.ExtensionMethods;
-using Domain.Enums;
 using DotNetEnv;
 using Infrastructure;
 using Infrastructure.Entities;
