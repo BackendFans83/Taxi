@@ -167,6 +167,46 @@ public class UserControllerTests
     }
 
     #endregion
+    
+    #region GetPassengerProfile Tests
+    
+    [Fact]
+    public async Task GetPassengerProfile_ReturnsOkWithPassengerProfile()
+    {
+        var passengerDto = new PassengerProfileDto
+        {
+            Id = 1,
+            Name = "Test Passenger",
+            AvatarUrl = "avatar.jpg",
+            IsBanned = false,
+            TotalRides = 10,
+            TotalReviews = 5,
+            Rating = 4.5f
+        };
+        mockService.Setup(s => s.GetPassengerProfileAsync(1))
+            .ReturnsAsync(Result<PassengerProfileDto>.Success(passengerDto));
+
+        var result = await controller.GetPassengerProfile(passengerDto.Id);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var returnedProfile = Assert.IsType<PassengerProfileDto>(okResult.Value);
+        Assert.Equal("Test Passenger", returnedProfile.Name);
+    }
+        
+    [Fact]
+    public async Task GetPassengerProfile_ProfileNotFound_ReturnsNotFound()
+    {
+        mockService.Setup(s => s.GetPassengerProfileAsync(1))
+            .ReturnsAsync(Result<PassengerProfileDto>.Failure(404, "Profile not found"));
+
+        var result = await controller.GetPassengerProfile(1);
+
+        var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(404, statusCodeResult.StatusCode);
+        Assert.Equal("Profile not found", statusCodeResult.Value);
+    }
+    
+    #endregion
 
     #region UpdateCurrentUserProfile Tests
 
