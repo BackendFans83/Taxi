@@ -45,6 +45,15 @@ public class UserController(IUserService userService) : ControllerBase
                 return Unauthorized();
         }
     }
+    
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<PassengerProfileDto>> GetPassengerProfile(int id)
+    {
+        var passengerResult = await userService.GetPassengerProfileAsync(id);
+        return passengerResult.IsSuccess
+            ? Ok(passengerResult.Value)
+            : StatusCode(passengerResult.StatusCode, passengerResult.ErrorMessage);
+    }
 
     [HttpPut("me")]
     [ProducesResponseType(typeof(PassengerProfileDto),200)]
