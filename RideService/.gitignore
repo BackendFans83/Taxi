@@ -1,4 +1,4 @@
 obj
 .idea
 bin
-AuthService.sln.DotSettings.user
+*.sln.DotSettings.user
