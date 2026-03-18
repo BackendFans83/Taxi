@@ -1,13 +1,24 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using RideService.Data;
 using RideService.Repositories;
 using RideService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+<<<<<<< feature/ride-service/di-and-routing
 builder.Services.AddControllers();
 builder.Services.AddScoped<IRideService, RideService.Services.RideService>();
 builder.Services.AddScoped<IRideRepository, RideRepository>();
+=======
+var necessaryConfigs = new List<string>
+    { "Jwt:Issuer", "Jwt:Audience", "Jwt:SecretKey" };
+foreach (var necessaryConfig in necessaryConfigs)
+    if (string.IsNullOrWhiteSpace(builder.Configuration[necessaryConfig]))
+        throw new InvalidOperationException(necessaryConfig + " not found");
+>>>>>>> dev/ride-service
 
 #region db_connections
 
@@ -21,14 +32,41 @@ builder.Services.AddDbContext<DbContext, ApplicationDbContext>(options =>
 
 #endregion
 
+#region auth
+
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
+        };
+    });
+builder.Services.AddAuthorization();
+
+#endregion
+
 var app = builder.Build();
 
 using var scope = app.Services.CreateScope();
 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 await db.Database.OpenConnectionAsync();
 
+<<<<<<< feature/ride-service/di-and-routing
 app.UseHttpsRedirection();
 app.UseRouting();
 app.MapControllers();
+=======
+app.UseAuthentication();
+app.UseAuthorization();
+>>>>>>> dev/ride-service
 
 app.Run();
