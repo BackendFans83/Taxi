@@ -8,17 +8,15 @@ using RideService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-<<<<<<< feature/ride-service/di-and-routing
-builder.Services.AddControllers();
-builder.Services.AddScoped<IRideService, RideService.Services.RideService>();
-builder.Services.AddScoped<IRideRepository, RideRepository>();
-=======
 var necessaryConfigs = new List<string>
     { "Jwt:Issuer", "Jwt:Audience", "Jwt:SecretKey" };
 foreach (var necessaryConfig in necessaryConfigs)
     if (string.IsNullOrWhiteSpace(builder.Configuration[necessaryConfig]))
         throw new InvalidOperationException(necessaryConfig + " not found");
->>>>>>> dev/ride-service
+
+builder.Services.AddControllers();
+builder.Services.AddScoped<IRideService, RideService.Services.RideService>();
+builder.Services.AddScoped<IRideRepository, RideRepository>();
 
 #region db_connections
 
@@ -60,13 +58,10 @@ using var scope = app.Services.CreateScope();
 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 await db.Database.OpenConnectionAsync();
 
-<<<<<<< feature/ride-service/di-and-routing
 app.UseHttpsRedirection();
 app.UseRouting();
-app.MapControllers();
-=======
 app.UseAuthentication();
 app.UseAuthorization();
->>>>>>> dev/ride-service
+app.MapControllers();
 
 app.Run();
