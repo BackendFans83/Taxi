@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RideService.Data;
+using RideService.Repositories;
+using RideService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,10 @@ var necessaryConfigs = new List<string>
 foreach (var necessaryConfig in necessaryConfigs)
     if (string.IsNullOrWhiteSpace(builder.Configuration[necessaryConfig]))
         throw new InvalidOperationException(necessaryConfig + " not found");
+
+builder.Services.AddControllers();
+builder.Services.AddScoped<IRideService, RideService.Services.RideService>();
+builder.Services.AddScoped<IRideRepository, RideRepository>();
 
 #region db_connections
 
@@ -52,7 +58,10 @@ using var scope = app.Services.CreateScope();
 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 await db.Database.OpenConnectionAsync();
 
+app.UseHttpsRedirection();
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapControllers();
 
 app.Run();

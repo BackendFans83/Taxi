@@ -1,6 +1,8 @@
+using RideService.Services;
+
 namespace RideService.Controllers;
 
-public class RideController
+public class RideController(IRideService rideService)
 {
     
 }
