@@ -3,13 +3,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RideService.Data;
+using RideService.Producers;
 using RideService.Repositories;
 using RideService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var necessaryConfigs = new List<string>
-    { "Jwt:Issuer", "Jwt:Audience", "Jwt:SecretKey" };
+{
+    "Jwt:Issuer", "Jwt:Audience", "Jwt:SecretKey", "Kafka:BootstrapServers", "Kafka:GroupId", "Kafka:RideTopic",
+    "Kafka:RideCreatedEvent"
+};
 foreach (var necessaryConfig in necessaryConfigs)
     if (string.IsNullOrWhiteSpace(builder.Configuration[necessaryConfig]))
         throw new InvalidOperationException(necessaryConfig + " not found");
@@ -17,6 +21,7 @@ foreach (var necessaryConfig in necessaryConfigs)
 builder.Services.AddControllers();
 builder.Services.AddScoped<IRideService, RideService.Services.RideService>();
 builder.Services.AddScoped<IRideRepository, RideRepository>();
+builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
 #region db_connections
 
