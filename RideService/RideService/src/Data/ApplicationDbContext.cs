@@ -5,7 +5,7 @@ namespace RideService.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
-    DbSet<Ride> Rides { get; set; }
+    public DbSet<Ride> Rides { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
