@@ -5,7 +5,7 @@ public class Ride
 {
     public int Id { get; set; }
     public int PassengerId { get; set; }
-    public int DriverId { get; set; }
+    public int? DriverId { get; set; }
     public RideStatus Status { get; set; }
     
     public double PickupLatitude { get; set; }
@@ -15,8 +15,8 @@ public class Ride
     
     public string PickupAddress { get; set; }
     public string DropOffAddress { get; set; }
-    public decimal Price { get; set; }
-    public double Distance { get; set; }
+    public decimal? Price { get; set; }
+    public double? Distance { get; set; }
     
     public DateTime RequestedAt { get; set; }
     public DateTime? AcceptedAt { get; set; }
