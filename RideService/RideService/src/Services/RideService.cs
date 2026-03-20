@@ -1,10 +1,11 @@
 using RideService.DTOs;
 using RideService.Models;
+using RideService.Producers;
 using RideService.Repositories;
 
 namespace RideService.Services;
 
-public class RideService(IRideRepository rideRepository) : IRideService
+public class RideService(IRideRepository rideRepository, IKafkaProducer kafkaProducer) : IRideService
 {
     public async Task<Result<Ride>> CreateRideAsync(CreateRideDto dto)
     {
@@ -20,8 +21,18 @@ public class RideService(IRideRepository rideRepository) : IRideService
             Status = RideStatus.Requested,
             RequestedAt = DateTime.UtcNow
         };
+        Ride created;
 
-        var created = await rideRepository.AddAsync(ride);
+        try
+        {
+            created = await rideRepository.AddAsync(ride);
+            await kafkaProducer.SendRideCreatedEventAsync(new RideDto(created));
+        }
+        catch (Exception ex)
+        {
+            return Result<Ride>.Failure(500, ex.Message);
+        }
+
         return Result<Ride>.Success(created);
     }
 }
