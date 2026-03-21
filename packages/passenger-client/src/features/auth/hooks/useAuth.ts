@@ -9,9 +9,12 @@ export const useAuth = () => {
   const login = async (credentials: LoginCredentials) => {
     userEntity.setLoading(true);
     userEntity.clearError();
-    
+
     try {
-      const user = await authApi.login(credentials);
+      // Login возвращает User, но нам нужно получить полные данные с email и role
+      await authApi.login(credentials);
+      // Загружаем полные данные пользователя после логина
+      const user = await authApi.getCurrentUser();
       userEntity.setUser(user);
       return user;
     } catch (error) {
@@ -26,9 +29,12 @@ export const useAuth = () => {
   const register = async (credentials: RegisterCredentials) => {
     userEntity.setLoading(true);
     userEntity.clearError();
-    
+
     try {
-      const user = await authApi.register(credentials);
+      // Register возвращает User, но нам нужно получить полные данные с email и role
+      await authApi.register(credentials);
+      // Загружаем полные данные пользователя после регистрации
+      const user = await authApi.getCurrentUser();
       userEntity.setUser(user);
       return user;
     } catch (error) {
@@ -52,7 +58,7 @@ export const useAuth = () => {
   const loadCurrentUser = async () => {
     userEntity.setLoading(true);
     userEntity.clearError();
-    
+
     try {
       const user = await authApi.getCurrentUser();
       userEntity.setUser(user);
