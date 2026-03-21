@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosRequestConfig, Method } from 'axios';
 
-const BASE_URL = '/api/v1';
+const BASE_URL = '';
 
 interface HttpOptions extends Omit<AxiosRequestConfig, 'method' | 'url' | 'params'> {
   params?: Record<string, string>;

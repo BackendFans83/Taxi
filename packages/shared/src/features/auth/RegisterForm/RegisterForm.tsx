@@ -81,6 +81,7 @@ export const RegisterForm: Component<RegisterFormProps> = (props) => {
         password: password(),
         name: name() || undefined,
         phone: phone() || undefined,
+        role: 'passenger', // Хардкод роли пассажира
       } as RegisterCredentials);
       props.onSuccess?.();
     } catch (err) {
