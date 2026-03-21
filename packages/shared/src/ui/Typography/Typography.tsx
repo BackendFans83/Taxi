@@ -1,4 +1,5 @@
-import { splitProps, ComponentProps, createMemo } from 'solid-js';
+import { splitProps, createMemo } from 'solid-js';
+import type { ComponentProps } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import styles from './Typography.module.css';
 
