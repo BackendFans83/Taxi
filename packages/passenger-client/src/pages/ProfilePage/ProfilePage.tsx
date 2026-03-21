@@ -2,7 +2,7 @@ import type { Component } from 'solid-js';
 import { ProfileForm, Stack, Paper, H6, Button, CircularProgress } from '@taxi/shared';
 import { useNavigate } from '@solidjs/router';
 import { useAuth } from '@features/auth/hooks/useAuth';
-import type { User } from '@taxi/shared/types';
+import type { User, UserWithAuth } from '@taxi/shared/types';
 
 const ProfilePage: Component = () => {
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ const ProfilePage: Component = () => {
       <Stack alignItems="center" style={{ padding: '0 16px' }}>
         <Paper elevation="md" style={{ 'max-width': '500px', width: '100%' }}>
           <ProfileForm
-            initialData={auth.user() ?? undefined}
+            initialData={auth.user() as UserWithAuth | undefined}
             onSuccess={handleSuccess}
           />
         </Paper>
