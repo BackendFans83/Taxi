@@ -1,5 +1,6 @@
-import { JSX, splitProps } from 'solid-js';
-import { Paper, PaperProps } from '../Paper/Paper';
+import { splitProps } from 'solid-js';
+import type { PaperProps } from '../Paper/Paper';
+import { Paper } from '../Paper/Paper';
 
 export type BoxProps = PaperProps; // Box использует те же пропсы, что и Paper
 

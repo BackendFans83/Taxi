@@ -31,6 +31,14 @@
     "./types/*": {
       "types": "./src/types/*.ts",
       "default": "./src/types/*.ts"
+    },
+    "./entities/*": {
+      "types": "./src/entities/*/index.ts",
+      "default": "./src/entities/*/index.ts"
+    },
+    "./features/*": {
+      "types": "./src/features/*/index.ts",
+      "default": "./src/features/*/index.ts"
     }
   },
   "peerDependencies": {

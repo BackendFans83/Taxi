@@ -1,0 +1,9 @@
+/* Import shared global styles */
+@import '@taxi/shared/global.css';
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background: var(--background);
+  color: var(--text-primary);
+  line-height: 1.6;
+}

@@ -1,6 +1,7 @@
-import axios, { AxiosRequestConfig, Method } from 'axios';
+import axios from 'axios';
+import type { AxiosRequestConfig, Method } from 'axios';
 
-const BASE_URL = '/api/v1';
+const BASE_URL = '';
 
 interface HttpOptions extends Omit<AxiosRequestConfig, 'method' | 'url' | 'params'> {
   params?: Record<string, string>;
@@ -14,15 +15,14 @@ interface CacheEntry<T> {
 class HttpClient {
   private baseURL: string;
   private cache = new Map<string, CacheEntry<unknown>>();
-  private defaultTTL = 5 * 60 * 1000; // 5 минут по умолчанию
+  private defaultTTL = 5 * 60 * 1000;
   
-  // Эндпоинты, которые не кэшируем (мутации)
   private noCacheMethods = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
   
   // Эндпоинты с индивидуальным TTL (мс)
   private customTTL: Record<string, number> = {
-    '/auth/me': 2 * 60 * 1000,      // 2 минуты для данных пользователя
-    '/users': 3 * 60 * 1000,        // 3 минуты для пользователей
+    '/auth/me': 2 * 60 * 1000,
+    '/users': 3 * 60 * 1000,
   };
 
   constructor(baseURL: string = BASE_URL) {
@@ -34,7 +34,6 @@ class HttpClient {
   }
 
   private getTTL(endpoint: string): number {
-    // Ищем подходящее правило по префиксу
     for (const [pattern, ttl] of Object.entries(this.customTTL)) {
       if (endpoint.startsWith(pattern)) {
         return ttl;
@@ -60,11 +59,6 @@ class HttpClient {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 
-  /**
-   * Очистка кэша
-   * @param pattern - шаблон эндпоинта (например, '/users' очистит все /users/*)
-   * Если не указан - очищает весь кэш
-   */
   clearCache(pattern?: string): void {
     if (!pattern) {
       this.cache.clear();
@@ -78,10 +72,6 @@ class HttpClient {
     }
   }
 
-  /**
-   * Инвалидация кэша после мутаций
-   * Автоматически вызывается при POST/PUT/DELETE/PATCH
-   */
   private invalidateCache(endpoint: string, method: Method): void {
     if (this.noCacheMethods.has(method)) {
       // Извлекаем базовый путь (например, /users/123 -> /users)
@@ -99,7 +89,6 @@ class HttpClient {
     const { params, ...axiosConfig } = options;
     const cacheKey = this.getCacheKey(endpoint, params);
 
-    // Для GET запросов проверяем кэш
     if (method === 'GET') {
       const ttl = this.getTTL(endpoint);
       const cachedData = this.getFromCache<T>(cacheKey, ttl);
@@ -121,17 +110,14 @@ class HttpClient {
         ...axiosConfig,
       });
 
-      // Кэшируем успешные GET запросы
       if (method === 'GET' && response.data !== undefined) {
         this.setCache(cacheKey, response.data);
       }
 
-      // Инвалидируем кэш при мутациях
       this.invalidateCache(endpoint, method);
 
       return response.data;
     } catch (error) {
-      // При ошибке пробуем вернуть устаревшие данные из кэша (stale-while-revalidate)
       if (method === 'GET') {
         const staleData = this.cache.get(cacheKey) as CacheEntry<T> | undefined;
         if (staleData) {
@@ -158,15 +144,12 @@ class HttpClient {
   delete<T>(endpoint: string, options: HttpOptions = {}): Promise<T> {
     return this.request<T>(endpoint, 'DELETE', options);
   }
-  
-  /**
-   * Патч запрос с поддержкой кэширования
-   */
+
   patch<T>(endpoint: string, data?: unknown, options: HttpOptions = {}): Promise<T> {
     return this.request<T>(endpoint, 'PATCH', { ...options, data });
   }
 }
 
-export const http = new HttpClient();
+export const http = new HttpClient(BASE_URL);
 export { HttpClient };
 export default http;

@@ -12,7 +12,12 @@
         ],
         "noEmit": true,
         "strict": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "baseUrl": ".",
+        "paths": {
+            "@taxi/shared": ["src/index.ts"],
+            "@taxi/shared/*": ["src/*"]
+        }
     },
     "include": [
         "src"
