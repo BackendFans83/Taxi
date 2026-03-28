@@ -21,33 +21,22 @@ public class RideServiceTests
         _rideService = new RideService.Services.RideService(_rideRepositoryMock.Object, _kafkaProducerMock.Object);
     }
 
+    private static CreateRideDto CreateRideDto() => new()
+    {
+        PassengerId = 1,
+        PickupLatitude = 83.97,
+        PickupLongitude = 83.97,
+        DropOffLatitude = 83.83,
+        DropOffLongitude = 83.83,
+        PickupAddress = "ул. Пушкина",
+        DropOffAddress = "ул. Колотушкина"
+    };
+
     [Fact]
     public async Task CreateRideAsync_ValidDto_CallsRepositoryAndReturnsSuccess()
     {
-        var dto = new CreateRideDto
-        {
-            PassengerId = 1,
-            PickupLatitude = 83.97,
-            PickupLongitude = 83.97,
-            DropOffLatitude = 83.83,
-            DropOffLongitude = 83.83,
-            PickupAddress = "ул. Пушкина",
-            DropOffAddress = "ул. Колотушкина"
-        };
-
-        var savedRide = new Ride
-        {
-            Id = 1,
-            PassengerId = dto.PassengerId,
-            PickupLatitude = dto.PickupLatitude,
-            PickupLongitude = dto.PickupLongitude,
-            DropOffLatitude = dto.DropOffLatitude,
-            DropOffLongitude = dto.DropOffLongitude,
-            PickupAddress = dto.PickupAddress,
-            DropOffAddress = dto.DropOffAddress,
-            Status = RideStatus.Requested,
-            RequestedAt = DateTime.UtcNow
-        };
+        var dto = CreateRideDto();
+        var savedRide = MapToRide(dto);
 
         _rideRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Ride>())).ReturnsAsync(savedRide);
 
@@ -66,16 +55,7 @@ public class RideServiceTests
     [Fact]
     public async Task CreateRideAsync_SetsRequestedStatus()
     {
-        var dto = new CreateRideDto
-        {
-            PassengerId = 1,
-            PickupLatitude = 83.97,
-            PickupLongitude = 83.97,
-            DropOffLatitude = 83.83,
-            DropOffLongitude = 83.83,
-            PickupAddress = "ул. Пушкина",
-            DropOffAddress = "ул. Колотушкина"
-        };
+        var dto = CreateRideDto();
 
         Ride? capturedRide = null;
         _rideRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Ride>()))
@@ -92,29 +72,8 @@ public class RideServiceTests
     [Fact]
     public async Task CreateRideAsync_CallsKafkaProducer_OnSuccess()
     {
-        var dto = new CreateRideDto
-        {
-            PassengerId = 1,
-            PickupLatitude = 83.97,
-            PickupLongitude = 83.97,
-            DropOffLatitude = 83.83,
-            DropOffLongitude = 83.83,
-            PickupAddress = "ул. Пушкина",
-            DropOffAddress = "ул. Колотушкина"
-        };
-
-        var savedRide = new Ride
-        {
-            Id = 1,
-            PassengerId = dto.PassengerId,
-            PickupLatitude = dto.PickupLatitude,
-            PickupLongitude = dto.PickupLongitude,
-            DropOffLatitude = dto.DropOffLatitude,
-            DropOffLongitude = dto.DropOffLongitude,
-            PickupAddress = dto.PickupAddress,
-            DropOffAddress = dto.DropOffAddress,
-            Status = RideStatus.Requested
-        };
+        var dto = CreateRideDto();
+        var savedRide = MapToRide(dto);
 
         _rideRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Ride>())).ReturnsAsync(savedRide);
         _kafkaProducerMock.Setup(p => p.SendRideCreatedEventAsync(It.IsAny<RideDto>()))
@@ -128,16 +87,7 @@ public class RideServiceTests
     [Fact]
     public async Task CreateRideAsync_RepositoryThrows_ReturnsFailure()
     {
-        var dto = new CreateRideDto
-        {
-            PassengerId = 1,
-            PickupLatitude = 83.97,
-            PickupLongitude = 83.97,
-            DropOffLatitude = 83.83,
-            DropOffLongitude = 83.83,
-            PickupAddress = "ул. Пушкина",
-            DropOffAddress = "ул. Колотушкина"
-        };
+        var dto = CreateRideDto();
 
         _rideRepositoryMock.Setup(r => r.AddAsync(It.IsAny<Ride>()))
             .ThrowsAsync(new Exception("DB error"));
@@ -147,5 +97,22 @@ public class RideServiceTests
         Assert.False(result.IsSuccess);
         Assert.Equal(500, result.StatusCode);
         Assert.Contains("DB error", result.ErrorMessage);
+    }
+    private static Ride MapToRide(CreateRideDto dto)
+    {
+        var savedRide = new Ride
+        {
+            Id = 1,
+            PassengerId = dto.PassengerId,
+            PickupLatitude = dto.PickupLatitude,
+            PickupLongitude = dto.PickupLongitude,
+            DropOffLatitude = dto.DropOffLatitude,
+            DropOffLongitude = dto.DropOffLongitude,
+            PickupAddress = dto.PickupAddress,
+            DropOffAddress = dto.DropOffAddress,
+            Status = RideStatus.Requested,
+            RequestedAt = DateTime.UtcNow
+        };
+        return savedRide;
     }
 }

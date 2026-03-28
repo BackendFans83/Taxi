@@ -7,7 +7,7 @@ namespace RideService.Services;
 
 public class RideService(IRideRepository rideRepository, IKafkaProducer kafkaProducer) : IRideService
 {
-    public async Task<Result<Ride>> CreateRideAsync(CreateRideDto dto)
+    public async Task<Result<RideDto>> CreateRideAsync(CreateRideDto dto)
     {
         var ride = new Ride
         {
@@ -30,9 +30,9 @@ public class RideService(IRideRepository rideRepository, IKafkaProducer kafkaPro
         }
         catch (Exception ex)
         {
-            return Result<Ride>.Failure(500, ex.Message);
+            return Result<RideDto>.Failure(500, ex.Message);
         }
 
-        return Result<Ride>.Success(created);
+        return Result<RideDto>.Success(new RideDto(created));
     }
 }

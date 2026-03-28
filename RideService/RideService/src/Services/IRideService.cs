@@ -5,5 +5,5 @@ namespace RideService.Services;
 
 public interface IRideService
 {
-    Task<Result<Ride>> CreateRideAsync(CreateRideDto dto);
+    Task<Result<RideDto>> CreateRideAsync(CreateRideDto dto);
 }

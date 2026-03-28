@@ -17,13 +17,23 @@ public class KafkaProducerTests
     private readonly Mock<IProducer<string, string>> _producerMock;
     private const string RideTopic = "ride";
     private const string RideCreatedEvent = "ride";
-    
+
     public KafkaProducerTests()
     {
         _loggerMock = new Mock<ILogger<KafkaProducer>>();
         _configurationMock = new Mock<IConfiguration>();
         _producerMock = new Mock<IProducer<string, string>>();
     }
+
+    private static RideDto CreateRideDto(int id = 1, int passengerId = 123) => new(new Ride
+    {
+        Id = id,
+        PassengerId = passengerId,
+        PickupLatitude = 83.97,
+        PickupLongitude = 83.97,
+        DropOffLatitude = 83.83,
+        DropOffLongitude = 83.83,
+    });
 
     private KafkaProducer CreateProducer()
     {
@@ -51,15 +61,7 @@ public class KafkaProducerTests
     public async Task SendRideCreatedEventAsync_SendsMessageToKafka()
     {
         var producer = CreateProducer();
-        var rideDto = new RideDto(new Ride
-        {
-            Id = 1,
-            PassengerId = 123,
-            PickupLatitude = 83.97,
-            PickupLongitude = 83.97,
-            DropOffLatitude = 83.83,
-            DropOffLongitude = 83.83,
-        });
+        var rideDto = CreateRideDto();
 
         var deliveryResult = new DeliveryResult<string, string>
         {
@@ -83,15 +85,7 @@ public class KafkaProducerTests
     public async Task SendRideCreatedEventAsync_ProduceException_ReturnsFailure()
     {
         var producer = CreateProducer();
-        var rideDto = new RideDto(new Ride
-        {
-            Id = 1,
-            PassengerId = 2,
-            PickupLatitude = 83.97,
-            PickupLongitude = 83.97,
-            DropOffLatitude = 83.83,
-            DropOffLongitude = 83.83,
-        });
+        var rideDto = CreateRideDto(1, 2);
 
         _producerMock.Setup(p =>
                 p.ProduceAsync(It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
@@ -109,15 +103,8 @@ public class KafkaProducerTests
     public async Task SendMessageAsync_SetsCorrectMessageKeyAndValue()
     {
         var producer = CreateProducer();
-        var rideDto = new RideDto(new Ride
-        {
-            Id = 1,
-            PassengerId = 2,
-            PickupLatitude = 83.97,
-            PickupLongitude = 83.97,
-            DropOffLatitude = 83.83,
-            DropOffLongitude = 83.83,
-        });
+        var rideDto = CreateRideDto(1, 2);
+
         var kafkaEvent = new KafkaEvent<RideDto>(RideCreatedEvent, rideDto);
         var json = JsonSerializer.Serialize(kafkaEvent);
 
