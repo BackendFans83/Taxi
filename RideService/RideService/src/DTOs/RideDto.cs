@@ -11,6 +11,7 @@ public class RideDto
     public double PickupLongitude { get; set; }
     public double DropOffLatitude { get; set; }
     public double DropOffLongitude { get; set; }
+    public RideStatus Status { get; set; }
 
     public RideDto(Ride ride)
     {
@@ -20,5 +21,6 @@ public class RideDto
         PickupLongitude = ride.PickupLongitude;
         DropOffLatitude = ride.DropOffLatitude;
         DropOffLongitude = ride.DropOffLongitude;
+        Status = ride.Status;
     }
 }
